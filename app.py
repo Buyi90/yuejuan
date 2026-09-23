@@ -252,8 +252,19 @@ class AIMarkerApp(ttk.Window):
             lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
         )
 
-        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        content_window = canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
         canvas.configure(yscrollcommand=scrollbar.set)
+
+        def resize_content(event) -> None:
+            # Let the embedded frame grow with the viewport, but keep its
+            # requested size when the content still needs vertical scrolling.
+            canvas.itemconfigure(content_window, width=event.width)
+            canvas.itemconfigure(
+                content_window,
+                height=max(event.height, scrollable_frame.winfo_reqheight()),
+            )
+
+        canvas.bind("<Configure>", resize_content)
 
         canvas.pack(side="left", fill="both", expand=True)
         scrollbar.pack(side="right", fill="y")
@@ -446,8 +457,19 @@ class AIMarkerApp(ttk.Window):
         self.scroll_content = ttk.Frame(self.work_canvas)
         self.scroll_content.bind("<Configure>", lambda e: self.work_canvas.configure(scrollregion=self.work_canvas.bbox("all")))
 
-        self.work_canvas.create_window((0, 0), window=self.scroll_content, anchor="nw", tags="content")
+        self._work_content_window = self.work_canvas.create_window(
+            (0, 0), window=self.scroll_content, anchor="nw", tags="content"
+        )
         self.work_canvas.configure(yscrollcommand=scrollbar.set)
+
+        def resize_work_content(event) -> None:
+            self.work_canvas.itemconfigure(self._work_content_window, width=event.width)
+            self.work_canvas.itemconfigure(
+                self._work_content_window,
+                height=max(event.height, self.scroll_content.winfo_reqheight()),
+            )
+
+        self.work_canvas.bind("<Configure>", resize_work_content)
 
         self.work_canvas.pack(side="left", fill="both", expand=True)
         scrollbar.pack(side="right", fill="y")
@@ -463,7 +485,7 @@ class AIMarkerApp(ttk.Window):
 
         # 1. 识别答案卡片（最重要）
         answer_card = ttk.Labelframe(content, text="学生答案", style="Primary.Card.TLabelframe", padding=theme.SPACING["sm"])
-        answer_card.pack(fill="both", pady=(1, theme.SPACING["sm"]), padx=theme.SPACING["xs"])
+        answer_card.pack(fill="both", expand=True, pady=(1, theme.SPACING["sm"]), padx=theme.SPACING["xs"])
 
         self.answer_view = self._register_text(tk.Text(answer_card, wrap="word", height=5, font=(theme.FONT_FAMILY, 11, "bold")))
         self.answer_view.pack(fill="both", expand=True)
@@ -471,7 +493,7 @@ class AIMarkerApp(ttk.Window):
 
         # 2. 参考答案对比卡片
         reference_card = ttk.Labelframe(content, text="参考答案", style="Card.TLabelframe", padding=theme.SPACING["sm"])
-        reference_card.pack(fill="both", pady=(0, theme.SPACING["sm"]), padx=theme.SPACING["xs"])
+        reference_card.pack(fill="both", expand=True, pady=(0, theme.SPACING["sm"]), padx=theme.SPACING["xs"])
         self.reference_view = self._register_text(tk.Text(reference_card, wrap="word", height=3, font=(theme.FONT_FAMILY, 10)))
         self.reference_view.pack(fill="both", expand=True)
         self.reference_view.tag_config("ref", foreground=theme.COLORS["muted"])

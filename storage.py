@@ -21,7 +21,7 @@ BLANK_REF_FILE = DATA_DIR / "blank_reference.json"
 
 
 def ensure_data_dir() -> None:
-    DATA_DIR.mkdir(exist_ok=True)
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 
 def default_boxes() -> list[RegionBox]:

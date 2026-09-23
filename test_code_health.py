@@ -52,6 +52,8 @@ def test_packaged_storage_uses_appdata() -> None:
             storage = importlib.import_module("storage")
             expected = Path(tmp) / "MyApp" / "data"
             assert storage.DATA_DIR == expected
+            storage.ensure_data_dir()
+            assert expected.is_dir()
     finally:
         sys.modules.pop("storage", None)
         if had_frozen:

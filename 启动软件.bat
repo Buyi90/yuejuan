@@ -1,11 +1,27 @@
 @echo off
+setlocal
 cd /d "%~dp0"
-set "LOG=%~dp0startup_error.log"
-set "PYTHONW=%LocalAppData%\Programs\Python\Python312\pythonw.exe"
-if not exist "%PYTHONW%" set "PYTHONW=pythonw.exe"
-start "" "%PYTHONW%" "%~dp0main.py"
-timeout /t 2 /nobreak >nul
-if not exist "%LOG%" exit /b 0
-findstr /c:"--- startup failure ---" "%LOG%" >nul
-if errorlevel 1 exit /b 0
-start "" notepad.exe "%LOG%"
+set "PYTHONW=%~dp0.venv\Scripts\pythonw.exe"
+set "PYTHON=%~dp0.venv\Scripts\python.exe"
+
+if not exist "%~dp0main.py" (
+    echo Cannot find application entry point: %~dp0main.py
+    pause
+    exit /b 1
+)
+
+if exist "%PYTHONW%" (
+    start "" "%PYTHONW%" "%~dp0main.py"
+    exit /b 0
+)
+
+if exist "%PYTHON%" (
+    echo pythonw.exe is missing; starting with a console window.
+    start "" "%PYTHON%" "%~dp0main.py"
+    exit /b 0
+)
+
+echo Cannot find Python in the project's .venv\Scripts directory.
+echo Please install the dependencies or recreate the virtual environment.
+pause
+exit /b 1

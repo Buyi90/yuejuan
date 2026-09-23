@@ -1,10 +1,12 @@
 # -*- mode: python ; coding: utf-8 -*-
 
+from pathlib import Path
+
 from PyInstaller.utils.hooks import collect_submodules
-from PyInstaller.building.datastruct import Tree
 
 
 block_cipher = None
+project_dir = Path(SPECPATH).resolve()
 
 hiddenimports = (
     [
@@ -20,32 +22,20 @@ hiddenimports = (
 )
 
 a = Analysis(
-    ["main.py"],
-    pathex=[],
-    binaries=[
-        (r"C:\Users\lenovo\AppData\Local\Programs\Python\Python312\DLLs\_tkinter.pyd", "."),
-        (r"C:\Users\lenovo\AppData\Local\Programs\Python\Python312\DLLs\tcl86t.dll", "."),
-        (r"C:\Users\lenovo\AppData\Local\Programs\Python\Python312\DLLs\tk86t.dll", "."),
-    ],
-    datas=[
-        (r"C:\Users\lenovo\AppData\Local\Programs\Python\Python312\tcl\tcl8.6", "_tcl_data"),
-        (r"C:\Users\lenovo\AppData\Local\Programs\Python\Python312\tcl\tk8.6", "_tk_data"),
-        (r"C:\Users\lenovo\AppData\Local\Programs\Python\Python312\tcl\tcl8", "tcl8"),
-        (r"C:\Users\lenovo\AppData\Local\Programs\Python\Python312\Lib\tkinter", "tkinter"),
-        ("assets", "assets"),
-    ],
+    [str(project_dir / "main.py")],
+    pathex=[str(project_dir)],
+    binaries=[],
+    datas=[(str(project_dir / "assets"), "assets")],
     hiddenimports=hiddenimports,
     hookspath=[],
     hooksconfig={},
-    runtime_hooks=["pyi_runtime_tk.py"],
+    runtime_hooks=[str(project_dir / "pyi_runtime_tk.py")],
     excludes=[],
     win_no_prefer_redirects=False,
     win_private_assemblies=False,
     cipher=block_cipher,
     noarchive=False,
 )
-
-a.datas += Tree(r"C:\Users\lenovo\AppData\Local\Programs\Python\Python312\Lib\tkinter", prefix="tkinter")
 
 pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
 
@@ -69,5 +59,5 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon="assets/logo.ico",
+    icon=str(project_dir / "assets" / "logo.ico"),
 )

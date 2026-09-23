@@ -18,6 +18,10 @@
 
 ## 安装与启动
 
+### 构建可分发版本
+
+首次构建时安装打包依赖：python -m pip install -r requirements-build.txt，然后双击“构建软件.bat”。构建完成后，将 dist/AI智阅小助手.exe 复制到目标 Windows 10/11 x64 电脑并双击运行；目标电脑不需要安装 Python。程序首次运行会在用户的 Roaming 应用数据目录创建配置和历史文件。AI 在线评分仍需使用者配置自己的 API Key；使用 Ollama 时目标电脑需单独安装并启动 Ollama。Windows 可能对未签名的自制程序显示安全提示。
+
 在项目目录打开 PowerShell：
 
 ```powershell
@@ -44,7 +48,7 @@ python -m pytest
 python test_code_health.py
 ```
 
-打包配置保存在 `AI智阅小助手.spec`。`build/` 和 `dist/` 是本地生成目录，不需要提交到源码仓库。
+打包配置保存在 AI智阅小助手.spec，路径会根据项目目录及当前 Python 环境自动解析，不绑定某台电脑的用户名或 Python 安装位置。requirements-build.txt 单独列出打包依赖。build/ 和 dist/ 是本地生成目录，不需要提交到源码仓库。
 
 ## 项目结构
 
