@@ -1,19 +1,21 @@
 from __future__ import annotations
 
+import tkinter as tk
+from tkinter import ttk
 from typing import Any, Callable
 
-from PIL import Image
-
-import qtcompat as tk
-from qtcompat import ttk
+from PIL import Image, ImageTk
 
 import theme
+
+
+# 批改后确认窗口：复刻脚本里的确认提交、暂停、纠错和空白卡复核流程。
 
 
 class SubmitDialog(tk.Toplevel):
     def __init__(
         self,
-        master,
+        master: tk.Misc,
         result: dict[str, Any],
         image: Image.Image | None,
         mode: str,
@@ -34,7 +36,7 @@ class SubmitDialog(tk.Toplevel):
         self.on_mark_blank = on_mark_blank
         self.on_not_blank = on_not_blank
         self.paused = mode == "trial"
-        self._timer_id = None
+        self._timer_id: str | None = None
         self.preview_ref = None
         self.title("批改完成")
         self.geometry("900x620")
@@ -74,14 +76,14 @@ class SubmitDialog(tk.Toplevel):
         score = self.result.get("final_score", "")
         max_score = self.result.get("max_score", "")
         ttk.Label(result_panel, text="最终得分").pack(anchor="w")
-        ttk.Label(result_panel, text=("%s / %s" % (score, max_score)) if max_score != "" else str(score), font=(theme.FONT_FAMILY, 30, "bold")).pack(anchor="w", pady=(0, 8))
+        ttk.Label(result_panel, text=f"{score} / {max_score}" if max_score != "" else str(score), font=(theme.FONT_FAMILY, 30, "bold")).pack(anchor="w", pady=(0, 8))
 
         if self.result.get("sub_scores"):
             ttk.Label(result_panel, text="各小题得分").pack(anchor="w")
             sub = tk.Text(result_panel, height=5, wrap="word")
             sub.pack(fill="x", pady=(4, 8))
             for item in self.result["sub_scores"]:
-                sub.insert("end", "%s: %s/%s %s\n" % (item.get("label", ""), item.get("score", ""), item.get("maxScore", ""), item.get("comment", "")))
+                sub.insert("end", f"{item.get('label', '')}: {item.get('score', '')}/{item.get('maxScore', '')} {item.get('comment', '')}\n")
             sub.configure(state="disabled")
 
         ttk.Label(result_panel, text="识别答案").pack(anchor="w")
@@ -112,18 +114,14 @@ class SubmitDialog(tk.Toplevel):
         if self.mode != "trial":
             self.pause_btn.pack(side="left", padx=4)
         theme.icon_button(btns, "stop", "取消", command=self.cancel).pack(side="right", padx=4)
-        theme.icon_button(btns, "check", "提交并下一份", color="#FFFFFF", command=self.submit).pack(side="right", padx=4)
+        theme.icon_button(btns, "check", "提交并下一份", color="#FFFFFF", style="Primary.TButton", command=self.submit).pack(side="right", padx=4)
 
     def _draw_image(self, image: Image.Image) -> None:
-        from PySide6.QtGui import QImage, QPixmap
-
         w = max(self.canvas.winfo_width() - 20, 50)
         h = max(self.canvas.winfo_height() - 20, 50)
         preview = image.copy()
         preview.thumbnail((w, h))
-        data = preview.convert("RGBA").tobytes("raw", "RGBA")
-        qimage = QImage(data, preview.width, preview.height, QImage.Format_RGBA8888)
-        self.preview_ref = QPixmap.fromImage(qimage.copy())
+        self.preview_ref = ImageTk.PhotoImage(preview)
         self.canvas.delete("all")
         self.canvas.create_image(10, 10, image=self.preview_ref, anchor="nw")
 
@@ -132,7 +130,7 @@ class SubmitDialog(tk.Toplevel):
             return "等待教师确认"
         if self.paused:
             return "已暂停"
-        return "%s 秒后自动提交" % self.remaining if self.remaining > 0 else "准备提交"
+        return f"{self.remaining} 秒后自动提交" if self.remaining > 0 else "准备提交"
 
     def _tick(self) -> None:
         self.countdown_var.set(self._countdown_text())

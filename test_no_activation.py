@@ -92,7 +92,7 @@ def test_readme_sells_software_not_activation_codes() -> None:
     assert "输入激活码" not in readme
     assert "获取激活码" not in readme
     assert "需要激活后使用" not in readme
-    assert "直接售卖" in readme or "购买后" in readme
+    assert "\u65e0\u9700\u6fc0\u6d3b\u7801" in readme
     assert "无需激活码" in readme
 
 

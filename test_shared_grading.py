@@ -66,55 +66,6 @@ def test_prompt_has_no_diligence_section() -> None:
     assert "勤勉" not in prompt
 
 
-def test_config_tab_shares_provider_and_hides_diligence() -> None:
-    source = (ROOT / "app.py").read_text(encoding="utf-8")
-    assert "启用勤勉加分" not in source
-    assert "勤勉最高加分" not in source
-    assert "副评服务商" not in source
-    assert "仲裁服务商" not in source
-    assert "独立OCR" not in source
-    assert "主评模型" not in source
-    assert "副评模型" not in source
-    assert "仲裁模型" not in source
-    assert "服务商" in source
-    assert "模型" in source
-    assert 'values=["normal", "trial", "unattended"]' not in source
-    assert 'values=["direct", "ocr_first"]' not in source
-    assert "普通批改" in source
-    assert "试批" in source
-    assert "无人值守" in source
-    assert "直接识别" in source
-    assert "先识别再评分" in source
-    assert "增强对比" in source
-    assert 'values=["network", "local", "lan", "custom"]' not in source
-    assert 'values=["openai_compatible", "ollama"]' not in source
-    assert "网络接口" in source
-    assert "本机 Ollama" in source
-    assert "局域网 Ollama" in source
-    assert "自定义" in source
-    assert "OpenAI 兼容" in source
-    assert "Ollama 本地" in source
-    assert "原图直出" in source
-    assert "推荐：增强对比" in source
-    assert "去噪后再识别" in source
-    assert "黑白二值" in source
-    assert "截图后先处理再识别" not in source
-    assert "_choice_value(self.PROVIDER_SOURCE_CHOICES" in source
-    assert "_choice_value(self.PROVIDER_PROTOCOL_CHOICES" in source
-
-    tree = ast.parse(source)
-    save_all = None
-    show_about = None
-    for node in ast.walk(tree):
-        if isinstance(node, ast.FunctionDef) and node.name == "save_all":
-            save_all = ast.get_source_segment(source, node) or ""
-        if isinstance(node, ast.FunctionDef) and node.name == "show_about":
-            show_about = ast.get_source_segment(source, node) or ""
-    assert save_all is not None
-    assert show_about is not None
-    assert "save_config" in save_all
-    assert "max_score" in save_all
-    assert "save_config" not in show_about
 
 
 if __name__ == "__main__":

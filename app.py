@@ -5,14 +5,12 @@ import os
 import queue
 import threading
 import time
+import tkinter as tk
+from tkinter import filedialog, messagebox
 from typing import Any
 
-from PySide6.QtCore import QSize, Qt
-from PySide6.QtWidgets import QLabel, QGridLayout, QHBoxLayout, QMainWindow, QProgressBar, QPushButton, QSizePolicy, QVBoxLayout, QWidget
-
-import qtcompat as tk
-from qtcompat import DANGER, INFO, OUTLINE, PRIMARY, SECONDARY, SUCCESS, WARNING
-from qtcompat import filedialog, messagebox, ttk
+import ttkbootstrap as ttk
+from ttkbootstrap.constants import DANGER, INFO, OUTLINE, PRIMARY, SECONDARY, SUCCESS, WARNING
 
 import theme
 from about_dialog import show_about_dialog
@@ -30,7 +28,7 @@ from grading_pipeline import GradingHooks, GradingNetworkRecoverable, GradingSes
 from storage import CONFIG_FILE, PRESETS_FILE, clear_blank_reference, load_blank_reference, load_config, load_presets, save_blank_reference, save_config, save_presets
 
 
-# 主 UI 基于 PySide6，tk 兼容层由 qtcompat 提供。
+# 主 UI 基于 ttkbootstrap（ttk 的现代化主题封装），原生 tk.Text/Listbox 由 theme 模块统一配色。
 
 
 
@@ -165,14 +163,12 @@ class AppGradingHooks(GradingHooks):
         self.app.work_queue.put(("error", text))
 
 
-class AIMarkerApp(tk.Window):
+class AIMarkerApp(ttk.Window):
     def __init__(self):
-        super().__init__()
-        self._closed = False
-        self._destroying = False
+        super().__init__(themename=theme.THEME_NAME)
         self.title("AI智阅小助手")
-        self.geometry("420x780")
-        self.minsize(400, 720)
+        self.geometry("750x680")  # 进一步缩小（相比850再减100px宽）
+        self.minsize(700, 600)    # 最小尺寸
         theme.apply_window_icon(self)
 
         self.config_data: AppConfig = load_config()
@@ -207,84 +203,12 @@ class AIMarkerApp(tk.Window):
         self.pause_hotkey_watcher.start()
         self._refresh_pause_button()
 
-    def _create_card(self, parent) -> tuple[ttk.Frame, ttk.Frame]:
-        card = ttk.Frame(parent)
-        card.setObjectName("cardPanel")
-        inner = ttk.Frame(card)
-        inner.pack(fill="x", padx=10, pady=8)
-        return card, inner
-
-    def _card_section(self, parent, title: str, color: str = theme.COLORS["primary"]):
-        card, inner = self._create_card(parent)
-        card.pack(fill="x", pady=(0, 8))
-        self._create_section_title(inner, title, color).pack(fill="x", pady=(0, 6))
-        return inner
-
-    def _field_chip(self, parent, label: str, var, widget: str = "entry", values=None):
-        cell = ttk.Frame(parent)
-        cell.setObjectName("fieldChip")
-        cell.setMinimumHeight(30)
-        cell.setMaximumHeight(34)
-        cell.setMinimumWidth(0)
-        cell.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        lay = QHBoxLayout(cell)
-        lay.setContentsMargins(8, 2, 6, 2)
-        lay.setSpacing(4)
-        lab = ttk.Label(cell, text=label, font=(theme.FONT_FAMILY, 9))
-        lab.setMinimumWidth(0)
-        lab.setMaximumWidth(72)
-        lab.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-        lay.addWidget(lab, 0)
-        if widget == "combo":
-            field = ttk.Combobox(cell, textvariable=var, values=values or [], state="readonly")
-        else:
-            field = ttk.Entry(cell, textvariable=var)
-            if widget == "readonly":
-                field.setReadOnly(True)
-        field.setMinimumWidth(0)
-        field.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Fixed)
-        lay.addWidget(field, 1)
-        return cell
-
-    def _ensure_grid(self, parent) -> QGridLayout:
-        layout = parent.layout()
-        if isinstance(layout, QGridLayout):
-            return layout
-        layout = QGridLayout(parent)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setHorizontalSpacing(6)
-        layout.setVerticalSpacing(6)
-        layout.setColumnStretch(0, 1)
-        layout.setColumnStretch(1, 1)
-        return layout
-
-    def _two_col_field(self, parent, row: int, left_label: str, left_var, right_label: str, right_var) -> int:
-        left_kind = "readonly" if left_label in {"已改数量", "打分个数"} else "entry"
-        right_kind = "readonly" if right_label in {"已改数量", "打分个数"} else "entry"
-        left = self._field_chip(parent, left_label, left_var, widget=left_kind)
-        right = self._field_chip(parent, right_label, right_var, widget=right_kind)
-        layout = self._ensure_grid(parent)
-        layout.addWidget(left, row, 0)
-        layout.addWidget(right, row, 1)
-        return row + 1
-
-    def _two_col_combo(self, parent, row: int, left_label: str, left_var, left_values, right_label: str, right_var, right_values) -> int:
-        left = self._field_chip(parent, left_label, left_var, widget="combo", values=left_values)
-        right = self._field_chip(parent, right_label, right_var, widget="combo", values=right_values)
-        layout = self._ensure_grid(parent)
-        layout.addWidget(left, row, 0)
-        layout.addWidget(right, row, 1)
-        return row + 1
-
-    def _create_section_title(self, parent, text: str, color: str = theme.COLORS["primary"]) -> ttk.Frame:
+    def _create_section_title(self, parent, text: str, color: str = "#3498DB") -> ttk.Frame:
         """创建带左侧竖线的分组标题（参考小作拓风格）"""
         container = ttk.Frame(parent)
 
         # 左侧竖线
         line = tk.Frame(container, bg=color, width=3, height=18)
-        line.setObjectName("accentBar")
-        line.setFixedSize(3, 18)
-        line.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         line.pack(side="left", fill="y", padx=(0, 6))
 
         # 标题文字
@@ -314,17 +238,32 @@ class AIMarkerApp(tk.Window):
         return row + 1
 
     def _create_scrollable_tab(self, title: str) -> tuple[ttk.Frame, ttk.Frame]:
+        """创建带滚动条的标签页，返回(tab外框, 可滚动内容框)"""
         tab = ttk.Frame(self.tabs)
         self.tabs.add(tab, text=title)
+
+        # 创建Canvas和滚动条
         canvas = tk.Canvas(tab, highlightthickness=0, bg=theme.COLORS["light"])
-        canvas.setWidgetResizable(True)
-        canvas.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        canvas.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        scrollbar = ttk.Scrollbar(tab, orient="vertical", command=canvas.yview)
         scrollable_frame = ttk.Frame(canvas)
-        scrollable_frame.setMinimumWidth(0)
-        scrollable_frame.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
+
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+
         canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
-        canvas.pack(fill="both", expand=True)
+        canvas.configure(yscrollcommand=scrollbar.set)
+
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+
+        # 绑定鼠标滚轮
+        def on_mousewheel(event):
+            canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+        canvas.bind("<MouseWheel>", on_mousewheel)
+        scrollable_frame.bind("<MouseWheel>", on_mousewheel)
+
         return tab, scrollable_frame
 
     def _build_style(self) -> None:
@@ -396,173 +335,105 @@ class AIMarkerApp(tk.Window):
             theme.style_listbox(widget, colors)
 
     def _build(self) -> None:
-        outer = ttk.Frame(self, padding=8)
+        outer = ttk.Frame(self, padding=theme.SPACING["lg"])
         outer.pack(fill="both", expand=True)
 
+        # 顶部标题栏 - 现代化设计
         header = ttk.Frame(outer)
-        header.pack(fill="x", pady=(0, 6))
+        header.pack(fill="x", pady=(0, theme.SPACING["xl"]))
 
-        logo = ttk.Label(header, image=theme.logo_photo(self, 22), name="titlelogo")
-        logo.setMaximumHeight(22)
-        logo.setMaximumWidth(22)
-        logo.pack(side="left", padx=(0, 6))
-        title_label = ttk.Label(header, text="AI智阅小助手", font=(theme.FONT_FAMILY, 12, "bold"))
-        title_label.setObjectName("appTitle")
-        title_label.setMaximumHeight(22)
-        title_label.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Fixed)
+        title_box = ttk.Frame(header)
+        title_box.pack(side="left")
+
+        brand_row = ttk.Frame(title_box)
+        brand_row.pack(anchor="w")
+        ttk.Label(brand_row, image=theme.logo_photo(self, 28), name="titlelogo").pack(side="left", padx=(0, theme.SPACING["md"]))
+        title_label = ttk.Label(brand_row, text="AI智阅小助手", style="Title.TLabel")
         title_label.pack(side="left")
+        ttk.Label(
+            title_box,
+            text="批量初评与自动填分",
+            font=theme.FONT_SMALL,
+            foreground=theme.COLORS["muted"],
+        ).pack(anchor="w", pady=(theme.SPACING["xs"], 0))
 
-        status_chip = ttk.Frame(header)
-        status_chip.setObjectName("statusChip")
-        status_chip.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Fixed)
-        status_chip.setMaximumHeight(22)
-        self.status_label_widget = ttk.Label(
-            status_chip,
-            textvariable=self.status_var,
-            font=(theme.FONT_FAMILY, 9, "bold"),
-            foreground=theme.COLORS["success"],
-        )
-        self.status_label_widget.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Fixed)
-        self.status_label_widget.pack(side="left", padx=8, pady=1)
-        status_chip.pack(side="right")
+        # 状态指示器 - 右上角
+        status_box = ttk.Frame(header)
+        status_box.pack(side="right", anchor="ne")
 
-        current_theme_display = theme.AVAILABLE_THEMES.get(theme.THEME_NAME, "清新蓝")
-        self.theme_var = tk.StringVar(value=current_theme_display)
-        theme_names = list(theme.AVAILABLE_THEMES.values())
-        self.theme_combo = ttk.Combobox(
-            header,
-            textvariable=self.theme_var,
-            values=theme_names,
-            state="readonly",
-            width=8,
-        )
-        self.theme_combo.bind("<<ComboboxSelected>>", self.change_theme)
-        self.theme_combo.hide()
+        status_container = ttk.Frame(status_box)
+        status_container.pack()
+
+        ttk.Label(status_container, text="状态", font=(theme.FONT_FAMILY, 10), foreground=theme.COLORS["muted"]).pack(side="left", padx=(0, theme.SPACING["sm"]))
+        self.status_label_widget = ttk.Label(status_container, textvariable=self.status_var, font=(theme.FONT_FAMILY, 11, "bold"), bootstyle=SUCCESS)
+        self.status_label_widget.pack(side="left")
 
         self.tabs = ttk.Notebook(outer)
-        self.tabs.setDocumentMode(True)
-        self.tabs.tabBar().setExpanding(True)
-        self.tabs.tabBar().setUsesScrollButtons(False)
-        self.tabs.tabBar().setDrawBase(False)
-        self.tabs.tabBar().setElideMode(Qt.ElideNone)
         self.tabs.pack(fill="both", expand=True)
-        self._build_provider_tab()
-        self._build_config_tab()
-        self._build_answer_config_tab()
         self._build_work_tab()
-        self._apply_visible_tab_labels()
+        self._build_answer_config_tab()  # 新增：答案配置标签页
+        self._build_config_tab()
+        self._build_provider_tab()
+        self._build_box_tab()
+        self._build_history_tab()
+        self._build_preset_tab()
 
-        dock = ttk.Frame(outer)
-        dock.setObjectName("commandDock")
-        dock.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Maximum)
-        dock.pack(fill="x", pady=(6, 0))
+        # 底部状态栏 - 现代化设计
+        footer = ttk.Frame(outer)
+        footer.pack(fill="x", pady=(theme.SPACING["lg"], 0))
 
-        action_bar = ttk.Frame(dock)
-        action_bar.setObjectName("commandActions")
-        action_grid = QGridLayout(action_bar)
-        action_bar.pack(fill="x", pady=(4, 2), padx=6)
-        action_grid.setContentsMargins(0, 0, 0, 0)
-        action_grid.setHorizontalSpacing(4)
-        action_grid.setVerticalSpacing(2)
-        start_btn = theme.icon_button(
-            action_bar, "play", "开始批改", size=12, color="#FFFFFF", bootstyle=PRIMARY, command=self.start_grading
-        )
-        self.pause_button = theme.icon_button(
-            action_bar, "pause", "暂停", size=12, color=theme.COLORS["warning"], bootstyle=(WARNING, OUTLINE), command=self.toggle_pause, state="disabled"
-        )
-        stop_btn = theme.icon_button(
-            action_bar, "stop", "停止", size=12, color=theme.COLORS["danger"], bootstyle=(DANGER, OUTLINE), command=self.stop
-        )
-        debug_btn = theme.icon_button(
-            action_bar, "debug", "调试", size=12, color=theme.COLORS["primary"], bootstyle=(SECONDARY, OUTLINE), command=self.debug_once
-        )
-        for col, btn in enumerate((start_btn, self.pause_button, stop_btn, debug_btn)):
-            if btn is start_btn:
-                btn.setObjectName("btnPrimary")
-            elif btn is debug_btn:
-                btn.setObjectName("btnGhost")
-            btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-            btn.setMinimumWidth(0)
-            action_grid.addWidget(btn, 0, col)
-            action_grid.setColumnStretch(col, 1)
-        track = ttk.Frame(dock)
-        track.setObjectName("progressTrack")
-        track.pack(fill="x", padx=6, pady=(0, 2))
-        track.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        track_layout = track.layout() or QHBoxLayout(track)
-        track_layout.setContentsMargins(4, 2, 4, 2)
-        track_layout.setSpacing(8)
-        self.progress_bar = QProgressBar(track)
-        self.progress_bar.setObjectName("commandProgress")
-        self.progress_bar.setTextVisible(False)
-        self.progress_bar.setRange(0, 1)
-        self.progress_bar.setValue(0)
-        self.progress_bar.setFixedHeight(6)
-        self.progress_bar.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        track_layout.addWidget(self.progress_bar, 1)
-        track_layout.setAlignment(self.progress_bar, Qt.AlignVCenter)
-        self.progress_label = ttk.Label(
-            track,
-            textvariable=self.progress_var,
-            font=(theme.FONT_FAMILY, 10, "bold"),
-            name="progressLabel",
-        )
-        self.progress_label.setObjectName("progressLabel")
-        self.progress_label.setMinimumWidth(56)
-        self.progress_label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
-        track_layout.addWidget(self.progress_label, 0)
-        track_layout.setAlignment(self.progress_label, Qt.AlignVCenter | Qt.AlignRight)
-        self.progress_var.trace_add("write", self._sync_progress_bar)
-        self._sync_progress_bar()
+        # 左侧进度信息
+        progress_frame = ttk.Frame(footer)
+        progress_frame.pack(side="left")
 
-        footer = ttk.Frame(dock)
-        footer_grid = QGridLayout(footer)
-        footer.pack(fill="x", padx=6, pady=(0, 4))
-        footer_grid.setContentsMargins(0, 0, 0, 0)
-        footer_grid.setHorizontalSpacing(4)
-        footer_grid.setVerticalSpacing(2)
-        footer_btns = [
-            theme.icon_button(footer, "folder", "历史记录", command=self.show_history_dialog),
-            theme.icon_button(footer, "save_as", "方案管理", command=self.show_preset_dialog),
-            theme.icon_button(footer, "info", "关于", bootstyle=(INFO, OUTLINE), command=self.show_about),
-            theme.icon_button(footer, "save", "保存配置", bootstyle=(SUCCESS, OUTLINE), command=self.save_all),
-        ]
-        for col, btn in enumerate(footer_btns):
-            btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-            btn.setMinimumWidth(0)
-            footer_grid.addWidget(btn, 0, col)
-            footer_grid.setColumnStretch(col, 1)
-        for btn in list(action_bar.findChildren(QPushButton)) + list(footer.findChildren(QPushButton)):
-            btn.setProperty("compact", True)
-            btn.setMinimumWidth(0)
-            btn.setIconSize(QSize(12, 12))
-            btn.style().unpolish(btn)
-            btn.style().polish(btn)
+        ttk.Label(progress_frame, image=theme.icon_photo(self, "chart", 13, theme.COLORS["muted"])).pack(side="left", padx=(0, theme.SPACING["xs"]))
+        ttk.Label(progress_frame, text="批阅进度", font=(theme.FONT_FAMILY, 10)).pack(side="left", padx=(0, theme.SPACING["sm"]))
+        ttk.Label(progress_frame, textvariable=self.progress_var, font=(theme.FONT_FAMILY, 11, "bold"), bootstyle=PRIMARY).pack(side="left")
 
-    def _apply_visible_tab_labels(self) -> None:
-        labels = [
-            "AI" + chr(0x914D) + chr(0x7F6E),
-            chr(0x6539) + chr(0x5377) + chr(0x53C2) + chr(0x6570),
-            chr(0x8BC4) + chr(0x5206) + chr(0x6807) + chr(0x51C6),
-            chr(0x8BC4) + chr(0x5206) + chr(0x8FC7) + chr(0x7A0B),
-        ]
-        for i, label in enumerate(labels):
-            self.tabs.setTabText(i, label)
-        bar = self.tabs.tabBar()
-        bar.setExpanding(True)
-        bar.setUsesScrollButtons(False)
-        bar.setDrawBase(False)
-        bar.setElideMode(Qt.ElideNone)
+        # 中间主题选择
+        theme_frame = ttk.Frame(footer)
+        theme_frame.pack(side="left", padx=(20, 0))
+        ttk.Label(theme_frame, image=theme.icon_photo(self, "theme", 13, theme.COLORS["muted"])).pack(side="left", padx=(0, theme.SPACING["xs"]))
+        ttk.Label(theme_frame, text="主题", font=(theme.FONT_FAMILY, 9)).pack(side="left", padx=(0, theme.SPACING["xs"]))
+
+        # 获取当前主题的中文名
+        current_theme_display = theme.AVAILABLE_THEMES.get(theme.THEME_NAME, "清新蓝")
+        self.theme_var = tk.StringVar(value=current_theme_display)
+
+        # 显示中文名称列表
+        theme_names = list(theme.AVAILABLE_THEMES.values())
+        theme_combo = ttk.Combobox(theme_frame, textvariable=self.theme_var,
+                                   values=theme_names, state="readonly", width=10)
+        theme_combo.pack(side="left")
+        theme_combo.bind("<<ComboboxSelected>>", self.change_theme)
+
+        # 右侧操作按钮
+        theme.icon_button(footer, "info", "关于", bootstyle=(INFO, OUTLINE), command=self.show_about).pack(side="right", padx=(0, theme.SPACING["xs"]))
+        theme.icon_button(footer, "save", "保存配置", bootstyle=(SUCCESS, OUTLINE), command=self.save_all).pack(side="right")
 
     def _build_work_tab(self) -> None:
         tab = ttk.Frame(self.tabs, padding=theme.SPACING["sm"])
-        self.tabs.add(tab, text="过程")
+        self.tabs.add(tab, text="批改")
 
+        # 顶部工具栏 - 超紧凑化
         toolbar = ttk.Frame(tab)
         toolbar.pack(fill="x", pady=(0, theme.SPACING["sm"]))
-        theme.icon_button(toolbar, "check", "检查配置", bootstyle=(SECONDARY, OUTLINE), command=self.check_readiness).pack(side="left", padx=(0, 4))
-        theme.icon_button(toolbar, "camera", "截图预览", bootstyle=(INFO, OUTLINE), command=self.preview_capture).pack(side="left", padx=(0, 4))
-        theme.icon_button(toolbar, "scan", "采集范本", bootstyle=(SECONDARY, OUTLINE), command=self.capture_blank_reference).pack(side="left")
+
+        # 左侧主要操作
+        left_toolbar = ttk.Frame(toolbar)
+        left_toolbar.pack(side="left")
+        theme.icon_button(left_toolbar, "play", "开始批改", size=14, color="#FFFFFF", style="Primary.TButton", bootstyle=SUCCESS, command=self.start_grading).pack(side="left", padx=1)
+        self.pause_button = theme.icon_button(left_toolbar, "pause", "暂停", size=14, color="#FFFFFF", bootstyle=WARNING, command=self.toggle_pause, state="disabled")
+        self.pause_button.pack(side="left", padx=1)
+        theme.icon_button(left_toolbar, "debug", "调试", color="#FFFFFF", bootstyle=INFO, command=self.debug_once).pack(side="left", padx=1)
+        theme.icon_button(left_toolbar, "stop", "停止", color="#FFFFFF", bootstyle=DANGER, command=self.stop).pack(side="left", padx=theme.SPACING["xs"])
+
+        # 右侧辅助操作
+        right_toolbar = ttk.Frame(toolbar)
+        right_toolbar.pack(side="right")
+        theme.icon_button(right_toolbar, "check", "检查配置", bootstyle=(SECONDARY, OUTLINE), command=self.check_readiness).pack(side="left", padx=theme.SPACING["xs"])
+        theme.icon_button(right_toolbar, "camera", "截图预览", bootstyle=(INFO, OUTLINE), command=self.preview_capture).pack(side="left", padx=theme.SPACING["xs"])
+        theme.icon_button(right_toolbar, "scan", "采集范本", bootstyle=(SECONDARY, OUTLINE), command=self.capture_blank_reference).pack(side="left", padx=theme.SPACING["xs"])
 
         # 主滚动区域 - 使用Canvas实现
         canvas_frame = ttk.Frame(tab)
@@ -570,13 +441,16 @@ class AIMarkerApp(tk.Window):
 
         # 添加背景色
         self.work_canvas = tk.Canvas(canvas_frame, highlightthickness=0, bg=theme.COLORS["light"])
-        self.work_canvas.setWidgetResizable(True)
-        self.work_canvas.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.work_canvas.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        scrollbar = ttk.Scrollbar(canvas_frame, orient="vertical", command=self.work_canvas.yview)
 
         self.scroll_content = ttk.Frame(self.work_canvas)
+        self.scroll_content.bind("<Configure>", lambda e: self.work_canvas.configure(scrollregion=self.work_canvas.bbox("all")))
+
         self.work_canvas.create_window((0, 0), window=self.scroll_content, anchor="nw", tags="content")
-        self.work_canvas.pack(fill="both", expand=True)
+        self.work_canvas.configure(yscrollcommand=scrollbar.set)
+
+        self.work_canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
 
         # 鼠标滚轮绑定 - 只绑定到canvas，不使用bind_all
         def on_mousewheel(event):
@@ -588,21 +462,24 @@ class AIMarkerApp(tk.Window):
         content = self.scroll_content
 
         # 1. 识别答案卡片（最重要）
-        answer_card = self._card_section(content, "学生答案")
+        answer_card = ttk.Labelframe(content, text="学生答案", style="Primary.Card.TLabelframe", padding=theme.SPACING["sm"])
+        answer_card.pack(fill="both", pady=(1, theme.SPACING["sm"]), padx=theme.SPACING["xs"])
 
         self.answer_view = self._register_text(tk.Text(answer_card, wrap="word", height=5, font=(theme.FONT_FAMILY, 11, "bold")))
         self.answer_view.pack(fill="both", expand=True)
         self.answer_view.tag_config("highlight", foreground=theme.COLORS["dark"], font=(theme.FONT_FAMILY, 11, "bold"))
 
         # 2. 参考答案对比卡片
-        reference_card = self._card_section(content, "参考答案")
+        reference_card = ttk.Labelframe(content, text="参考答案", style="Card.TLabelframe", padding=theme.SPACING["sm"])
+        reference_card.pack(fill="both", pady=(0, theme.SPACING["sm"]), padx=theme.SPACING["xs"])
         self.reference_view = self._register_text(tk.Text(reference_card, wrap="word", height=3, font=(theme.FONT_FAMILY, 10)))
         self.reference_view.pack(fill="both", expand=True)
         self.reference_view.tag_config("ref", foreground=theme.COLORS["muted"])
         self.reference_view.configure(state="disabled")  # 只读
 
         # 3. 评分结果卡片（醒目显示）
-        score_card = self._card_section(content, "评分")
+        score_card = ttk.Labelframe(content, text="评分", style="Primary.Card.TLabelframe", padding=theme.SPACING["sm"])
+        score_card.pack(fill="x", pady=(0, theme.SPACING["sm"]), padx=theme.SPACING["xs"])
 
         score_display = ttk.Frame(score_card)
         score_display.pack(fill="x")
@@ -648,7 +525,8 @@ class AIMarkerApp(tk.Window):
         self.max_score_value.pack(side="left", padx=(theme.SPACING["sm"], 0))
 
         # 4. 评分说明（可折叠，超紧凑）
-        comment_card = self._card_section(content, "评分说明")
+        comment_card = ttk.Labelframe(content, text="评分说明", style="Card.TLabelframe", padding=theme.SPACING["sm"])
+        comment_card.pack(fill="x", pady=(0, theme.SPACING["sm"]), padx=theme.SPACING["xs"])
 
         self.comment_toggle_btn = theme.icon_button(comment_card, "chevron_down", "展开", bootstyle=(INFO, OUTLINE), command=self.toggle_comment)
         self.comment_toggle_btn.pack(fill="x")
@@ -661,7 +539,8 @@ class AIMarkerApp(tk.Window):
         self.comment_expanded = False
 
         # 5. AI详细输出（折叠，超紧凑）
-        output_card = self._card_section(content, "AI输出")
+        output_card = ttk.Labelframe(content, text="AI输出", style="Card.TLabelframe", padding=theme.SPACING["sm"])
+        output_card.pack(fill="x", pady=(0, theme.SPACING["sm"]), padx=theme.SPACING["xs"])
 
         self.output_toggle_btn = theme.icon_button(output_card, "chevron_down", "展开", bootstyle=(SECONDARY, OUTLINE), command=self.toggle_output)
         self.output_toggle_btn.pack(fill="x")
@@ -674,33 +553,56 @@ class AIMarkerApp(tk.Window):
 
     def _build_answer_config_tab(self) -> None:
         """答案配置标签页 - 紧凑化设计"""
-        _, tab = self._create_scrollable_tab("评分")
-        page = ttk.Frame(tab, padding=8)
-        page.pack(fill="both", expand=True)
+        _, tab = self._create_scrollable_tab("答案配置")
+        container = ttk.Frame(tab, padding=theme.SPACING["md"])
+        container.pack(fill="both", expand=True)
 
         # 初始化变量（如果还没初始化）
+        if not hasattr(self, 'grade_level'):
+            self.grade_level = tk.StringVar(value=self.config_data.grade_level)
+            self.subject = tk.StringVar(value=self.config_data.subject)
+            self.question_type = tk.StringVar(value=self.config_data.question_type)
+
+        # ┃ 基本信息
+        section = self._create_section_title(container, "基本信息", "#9B59B6")
+        section.pack(fill="x", pady=(0, theme.SPACING["sm"]))
+
+        meta_grid = ttk.Frame(container)
+        meta_grid.pack(fill="x", pady=(0, theme.SPACING["md"]))
+
+        ttk.Label(meta_grid, text="年级", font=(theme.FONT_FAMILY, 9)).grid(row=0, column=0, sticky="w", padx=(0, 2))
+        ttk.Entry(meta_grid, textvariable=self.grade_level, width=4).grid(row=0, column=1, sticky="ew", padx=(0, 6))
+        ttk.Label(meta_grid, text="学科", font=(theme.FONT_FAMILY, 9)).grid(row=0, column=2, sticky="w", padx=(0, 2))
+        ttk.Entry(meta_grid, textvariable=self.subject, width=4).grid(row=0, column=3, sticky="ew", padx=(0, 6))
+        ttk.Label(meta_grid, text="题型", font=(theme.FONT_FAMILY, 9)).grid(row=0, column=4, sticky="w", padx=(0, 2))
+        ttk.Entry(meta_grid, textvariable=self.question_type, width=4).grid(row=0, column=5, sticky="ew")
+
+        meta_grid.columnconfigure(1, weight=1)
+        meta_grid.columnconfigure(3, weight=1)
+        meta_grid.columnconfigure(5, weight=1)
+
         # ┃ 参考答案
-        answer_inner = self._card_section(page, "参考答案")
-        self.answer = self._labeled_text(answer_inner, "", self.config_data.answer, 6)
+        section = self._create_section_title(container, "参考答案", "#3498DB")
+        section.pack(fill="x", pady=(theme.SPACING["md"], theme.SPACING["sm"]))
+        self.answer = self._labeled_text(container, "", self.config_data.answer, 6)
 
         # ┃ 评分标准
-        rubric_inner = self._card_section(page, "评分标准")
-        self.rubric = self._labeled_text(rubric_inner, "", self.config_data.rubric, 6)
+        section = self._create_section_title(container, "评分标准", "#3498DB")
+        section.pack(fill="x", pady=(theme.SPACING["md"], theme.SPACING["sm"]))
+        self.rubric = self._labeled_text(container, "", self.config_data.rubric, 6)
 
         # ┃ 评分材料图片
-        material_card = self._card_section(page, "评分材料", "#27AE60")
+        section = self._create_section_title(container, "评分材料", "#27AE60")
+        section.pack(fill="x", pady=(theme.SPACING["md"], theme.SPACING["sm"]))
+
+        material_card = ttk.Frame(container)
+        material_card.pack(fill="x", pady=(0, theme.SPACING["md"]))
 
         material_bar = ttk.Frame(material_card)
         material_bar.pack(fill="x", pady=(0, theme.SPACING["xs"]))
-        add_btn = theme.icon_button(material_bar, "add", "添加", color="#FFFFFF", bootstyle=SUCCESS, command=self.add_material_images)
-        add_btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        add_btn.pack(side="left", fill="x", expand=True, padx=2)
-        remove_btn = theme.icon_button(material_bar, "delete", "移除", color="#FFFFFF", bootstyle=DANGER, command=self.remove_material_image)
-        remove_btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        remove_btn.pack(side="left", fill="x", expand=True, padx=2)
-        view_btn = theme.icon_button(material_bar, "eye", "查看", color="#FFFFFF", bootstyle=INFO, command=self.open_material_image)
-        view_btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        view_btn.pack(side="left", fill="x", expand=True, padx=2)
+        theme.icon_button(material_bar, "add", "添加", color="#FFFFFF", bootstyle=SUCCESS, command=self.add_material_images).pack(side="left", padx=2)
+        theme.icon_button(material_bar, "delete", "删除", color="#FFFFFF", bootstyle=DANGER, command=self.remove_material_image).pack(side="left", padx=2)
+        theme.icon_button(material_bar, "eye", "查看", color="#FFFFFF", bootstyle=INFO, command=self.open_material_image).pack(side="left", padx=2)
 
         self.material_list = self._register_listbox(tk.Listbox(material_card, height=4))
         self.material_list.pack(fill="x")
@@ -710,9 +612,6 @@ class AIMarkerApp(tk.Window):
         workflow = self.config_data.workflow
         scoring = self.config_data.scoring
 
-        self.grade_level = tk.StringVar(value=self.config_data.grade_level)
-        self.subject = tk.StringVar(value=self.config_data.subject)
-        self.question_type = tk.StringVar(value="填空")
         self.active_provider = tk.StringVar(value=self.config_data.active_provider)
         self.primary_enabled = tk.BooleanVar(value=workflow.primary_enabled)
         self.secondary_enabled = tk.BooleanVar(value=workflow.dual_enabled)
@@ -728,19 +627,19 @@ class AIMarkerApp(tk.Window):
         self.secondary_model = tk.StringVar(value=shared_model)
         self.arbitration_model = tk.StringVar(value=shared_model)
         self.ocr_model = tk.StringVar(value=shared_model)
-        self.recognition_mode = tk.StringVar(value=self._choice_label(self.RECOGNITION_MODE_CHOICES, "direct"))
+        self.recognition_mode = tk.StringVar(value=self._choice_label(self.RECOGNITION_MODE_CHOICES, workflow.recognition_mode))
         self.mode = tk.StringVar(value=self._choice_label(self.GRADE_MODE_CHOICES, workflow.mode))
         self.max_score = tk.StringVar(value=str(scoring.max_score))
         self.round_step = tk.StringVar(value=str(scoring.round_step))
         self.round_method = tk.StringVar(value=self._choice_label(self.ROUND_METHOD_CHOICES, scoring.round_method))
         self.save_images = tk.BooleanVar(value=self.config_data.save_images)
-        self.preprocess = tk.IntVar(value=1)
+        self.preprocess = tk.IntVar(value=self.config_data.preprocess_level)
         self.recognition_margin = tk.StringVar(value=str(self.config_data.recognition_margin))
         self.blank_enabled = tk.BooleanVar(value=self.config_data.blank_detection_enabled)
         self.capture_delay = tk.StringVar(value=str(workflow.capture_delay))
         self.scoring_delay = tk.StringVar(value=str(workflow.scoring_delay))
         self.next_paper_delay = tk.StringVar(value=str(workflow.next_paper_delay))
-        self.score_switch_mode = tk.StringVar(value=self._choice_label(self.SCORE_SWITCH_CHOICES, "single"))
+        self.score_switch_mode = tk.StringVar(value=self._choice_label(self.SCORE_SWITCH_CHOICES, workflow.score_switch_mode))
         self.target_count = tk.StringVar(value=str(workflow.target_count))
         self.pause_hotkey = tk.StringVar(value=workflow.pause_hotkey)
         self.retry_limit = tk.StringVar(value=str(workflow.retry_limit))
@@ -751,8 +650,6 @@ class AIMarkerApp(tk.Window):
         self.page_refresh_hotkey = tk.StringVar(value=workflow.page_refresh_hotkey)
         self.page_refresh_wait_seconds = tk.StringVar(value=str(workflow.page_refresh_wait_seconds))
         self.dual_threshold = tk.StringVar(value=str(workflow.dual_threshold))
-        self.graded_count = tk.StringVar(value=str(self.loop_count or 0))
-        self.score_box_count = tk.StringVar(value=str(sum(1 for box in self.config_data.boxes if box.kind == "score")))
 
     GRADE_MODE_CHOICES = [
         ("normal", "普通批改"),
@@ -839,140 +736,105 @@ class AIMarkerApp(tk.Window):
         return provider.model
 
     def _build_config_tab(self) -> None:
-        _, tab = self._create_scrollable_tab("参数")
-        page = ttk.Frame(tab, padding=8)
-        page.pack(fill="both", expand=True)
+        """配置标签页 - 只保留技术配置"""
+        _, tab = self._create_scrollable_tab("配置")
+        form = ttk.Frame(tab, padding=12)
+        form.pack(fill="both", expand=True)
+
         self._init_config_vars()
 
-        inner = self._card_section(page, "数值设置")
-        grid = ttk.Frame(inner)
-        grid.pack(fill="x")
-        self._two_col_field(grid, 0, "改卷数量", self.target_count, "取卡延时", self.capture_delay)
-        self._two_col_field(grid, 1, "已改数量", self.graded_count, "打分延时", self.scoring_delay)
-
-        inner = self._card_section(page, "题目设置")
-        grid = ttk.Frame(inner)
-        grid.pack(fill="x")
-        self._two_col_field(grid, 0, "题目满分", self.max_score, "批改间隔", self.next_paper_delay)
-        self._ensure_grid(grid).addWidget(self._field_chip(grid, "仲裁阈值", self.dual_threshold), 1, 0)
-        self._ensure_grid(grid).addWidget(
-            self._field_chip(
-                grid,
-                "批改模式",
-                self.mode,
-                widget="combo",
-                values=self._choice_labels(self.GRADE_MODE_CHOICES),
-            ),
-            2,
-            0,
-        )
-
-        inner = self._card_section(page, "标记设置")
-        self._build_box_tab(inner)
-
-        inner = self._card_section(page, "批改流程")
-        form = ttk.Frame(inner)
-        form.pack(fill="x")
         row = 0
-        role_row = ttk.Frame(form)
-        role_row.grid(row=row, column=0, columnspan=2, sticky="ew", pady=(0, 6))
-        ttk.Checkbutton(role_row, text="启用主评", variable=self.primary_enabled).pack(side="left", padx=(0, 14))
-        ttk.Checkbutton(role_row, text="启用副评", variable=self.secondary_enabled).pack(side="left", padx=(0, 14))
-        ttk.Checkbutton(role_row, text="启用仲裁", variable=self.arbitration_enabled).pack(side="left")
+        ttk.Checkbutton(form, text="启用主评", variable=self.primary_enabled).grid(row=row, column=1, sticky="w", pady=6)
         row += 1
+        ttk.Checkbutton(form, text="启用副评", variable=self.secondary_enabled).grid(row=row, column=1, sticky="w", pady=6)
+        row += 1
+        ttk.Checkbutton(form, text="启用仲裁", variable=self.arbitration_enabled).grid(row=row, column=1, sticky="w", pady=6)
+        row += 1
+        # 四个角色共用同一家供应商和同一个模型，界面只保留一组选择。
         row = self._shared_grading_provider_row(form, row)
         row = self._model_only_row(form, row, "模型", self.primary_model)
-        ttk.Checkbutton(form, text="保存答题卡截图到历史", variable=self.save_images).grid(row=row, column=1, sticky="w", pady=4)
+        ttk.Label(form, text="识别方式").grid(row=row, column=0, sticky="w", pady=6)
+        ttk.Combobox(form, textvariable=self.recognition_mode, values=self._choice_labels(self.RECOGNITION_MODE_CHOICES), state="readonly").grid(row=row, column=1, sticky="ew", pady=6)
+        row += 1
+        row = self._entry(form, row, "仲裁阈值", self.dual_threshold)
+        ttk.Label(form, text="批改模式").grid(row=row, column=0, sticky="w", pady=6)
+        ttk.Combobox(form, textvariable=self.mode, values=self._choice_labels(self.GRADE_MODE_CHOICES), state="readonly").grid(row=row, column=1, sticky="ew", pady=6)
+        row += 1
+        row = self._entry(form, row, "满分", self.max_score)
+        row = self._entry(form, row, "取整步长", self.round_step)
+        ttk.Label(form, text="取整方式").grid(row=row, column=0, sticky="w", pady=6)
+        ttk.Combobox(form, textvariable=self.round_method, values=self._choice_labels(self.ROUND_METHOD_CHOICES), state="readonly").grid(row=row, column=1, sticky="ew", pady=6)
+        row += 1
+        ttk.Checkbutton(form, text="保存答题卡截图到历史", variable=self.save_images).grid(row=row, column=1, sticky="w", pady=6)
+        row += 1
+        ttk.Label(form, text="OCR 预处理强度").grid(row=row, column=0, sticky="nw", pady=6)
+        preprocess_wrap = ttk.Frame(form)
+        preprocess_wrap.grid(row=row, column=1, sticky="ew", pady=6)
+        preprocess_line = ttk.Frame(preprocess_wrap)
+        preprocess_line.pack(fill="x")
+        ttk.Scale(preprocess_line, from_=0, to=3, variable=self.preprocess, orient="horizontal", command=lambda _v: self._refresh_preprocess_label()).pack(side="left", fill="x", expand=True, padx=(0, 8))
+        self.preprocess_label = ttk.Label(preprocess_line, text=self._preprocess_text(self.preprocess.get()))
+        self.preprocess_label.pack(side="left")
+        ttk.Label(preprocess_wrap, text="截图后先处理再识别：数字越大处理越重。默认推荐增强对比；字迹发糊用去噪，字迹很淡再用黑白二值。").pack(anchor="w")
         row += 1
         row = self._entry(form, row, "识别框内边距(px)", self.recognition_margin)
-        ttk.Checkbutton(form, text="启用空白答题卡检测", variable=self.blank_enabled).grid(row=row, column=1, sticky="w", pady=4)
+        ttk.Checkbutton(form, text="启用空白答题卡检测", variable=self.blank_enabled).grid(row=row, column=1, sticky="w", pady=6)
         row += 1
+        row = self._entry(form, row, "取卡延时(秒)", self.capture_delay)
+        row = self._entry(form, row, "打分延时(秒)", self.scoring_delay)
+        row = self._entry(form, row, "批改间隔延时(秒)", self.next_paper_delay)
+        ttk.Label(form, text="多打分框切换").grid(row=row, column=0, sticky="w", pady=6)
+        ttk.Combobox(form, textvariable=self.score_switch_mode, values=self._choice_labels(self.SCORE_SWITCH_CHOICES), state="readonly").grid(row=row, column=1, sticky="ew", pady=6)
+        row += 1
+        row = self._entry(form, row, "批改份数(0=不限)", self.target_count)
         row = self._entry(form, row, "暂停快捷键", self.pause_hotkey)
         ttk.Label(form, text="仅连续批改开始后生效，例如 F8 或 Ctrl+Shift+P。").grid(row=row, column=1, sticky="w")
         row += 1
         row = self._entry(form, row, "分值重试次数", self.retry_limit)
-        ttk.Checkbutton(form, text="连续相同分值时异常终止", variable=self.enable_abnormal_termination).grid(row=row, column=1, sticky="w", pady=4)
+        ttk.Checkbutton(form, text="连续相同分值时异常终止", variable=self.enable_abnormal_termination).grid(row=row, column=1, sticky="w", pady=6)
         row += 1
         row = self._entry(form, row, "异常终止份数", self.abnormal_termination_count)
-        ttk.Checkbutton(form, text="定时刷新页面", variable=self.enable_page_refresh).grid(row=row, column=1, sticky="w", pady=4)
+        ttk.Checkbutton(form, text="定时刷新页面", variable=self.enable_page_refresh).grid(row=row, column=1, sticky="w", pady=6)
         row += 1
         row = self._entry(form, row, "翻页刷新频率(份)", self.page_refresh_frequency)
         row = self._entry(form, row, "翻页刷新热键", self.page_refresh_hotkey)
         row = self._entry(form, row, "翻页后等待(秒)", self.page_refresh_wait_seconds)
+
+
         form.columnconfigure(1, weight=1)
+
     def _build_provider_tab(self) -> None:
-        _, tab = self._create_scrollable_tab("AI")
+        _, tab = self._create_scrollable_tab("服务商")
         container = ttk.Frame(tab, padding=theme.SPACING["sm"])
         container.pack(fill="both", expand=True)
 
         # ┃ 选择服务商（下拉选择）
-        card, inner = self._create_card(container)
-        card.pack(fill="x", pady=(0, 8))
-        section = self._create_section_title(inner, "选择服务商", "#3498DB")
+        section = self._create_section_title(container, "选择服务商", "#3498DB")
         section.pack(fill="x", pady=(0, theme.SPACING["sm"]))
 
-        select_frame = ttk.Frame(inner)
+        select_frame = ttk.Frame(container)
         select_frame.pack(fill="x", pady=(0, theme.SPACING["md"]))
 
         # 服务商下拉选择框
         self.provider_selector_var = tk.StringVar()
-        provider_selector_label = ttk.Label(select_frame, text="当前服务商", font=(theme.FONT_FAMILY, 9))
-        provider_selector_label.setObjectName("providerSelectorLabel")
-        provider_selector_label.setFixedWidth(76)
-        provider_selector_label.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-        provider_selector_label.pack(side="left", padx=(0, 0))
+        ttk.Label(select_frame, text="当前服务商", font=(theme.FONT_FAMILY, 9)).pack(side="left", padx=(0, 4))
         self.provider_selector = ttk.Combobox(select_frame, textvariable=self.provider_selector_var,
                                               state="readonly", width=20)
-        self.provider_selector.setObjectName("providerSelector")
         self.provider_selector.pack(side="left", fill="x", expand=True)
         self.provider_selector.bind("<<ComboboxSelected>>", self.on_provider_selector_changed)
 
         # 操作按钮（紧凑）
-        btn_frame = ttk.Frame(inner)
-        btn_frame.setObjectName("providerToolbar")
-        self._provider_fetch_buttons = []
-        self._provider_test_buttons = []
-        self._provider_action_busy = False
-        add_txt = chr(0x65B0) + chr(0x589E)
-        copy_txt = chr(0x590D) + chr(0x5236)
-        del_txt = chr(0x5220) + chr(0x9664)
-        save_txt = chr(0x4FDD) + chr(0x5B58)
-        test_txt = chr(0x6D4B) + chr(0x8BD5)
-        fetch_txt = chr(0x83B7) + chr(0x53D6) + chr(0x6A21) + chr(0x578B)
-        specs = [
-            ("add", add_txt, "#FFFFFF", SUCCESS, self.add_provider),
-            ("copy", copy_txt, "#FFFFFF", INFO, self.copy_provider),
-            ("delete", del_txt, "#FFFFFF", DANGER, self.delete_provider),
-            ("save", save_txt, "#FFFFFF", PRIMARY, self.save_provider_from_form),
-            ("test", test_txt, "#FFFFFF", SECONDARY, self.test_selected_provider),
-            ("refresh", fetch_txt, theme.COLORS["info"], (INFO, OUTLINE), self.fetch_provider_models),
-        ]
-        grid = QGridLayout(btn_frame)
-        grid.setContentsMargins(0, 0, 0, 0)
-        grid.setHorizontalSpacing(4)
-        grid.setVerticalSpacing(4)
+        btn_frame = ttk.Frame(container)
         btn_frame.pack(fill="x", pady=(0, theme.SPACING["md"]))
-        for i, (icon, label, color, style, cmd) in enumerate(specs):
-            btn = theme.icon_button(btn_frame, icon, label, size=11, color=color, bootstyle=style, command=cmd)
-            name = tk._bootstyle_name(style)
-            if name:
-                btn.setObjectName(name)
-            btn.setProperty("toolbar", True)
-            btn.setIconSize(QSize(11, 11))
-            btn.setMinimumWidth(0)
-            btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-            btn.setProperty("compact", True)
-            btn.style().unpolish(btn)
-            btn.style().polish(btn)
-            if icon == "refresh":
-                self._provider_fetch_buttons.append(btn)
-            elif icon == "test":
-                self._provider_test_buttons.append(btn)
-            grid.addWidget(btn, i // 3, i % 3)
+        theme.icon_button(btn_frame, "add", "新增", color="#FFFFFF", bootstyle=SUCCESS, command=self.add_provider).pack(side="left", padx=1)
+        theme.icon_button(btn_frame, "copy", "复制", color="#FFFFFF", bootstyle=INFO, command=self.copy_provider).pack(side="left", padx=1)
+        theme.icon_button(btn_frame, "delete", "删除", color="#FFFFFF", bootstyle=DANGER, command=self.delete_provider).pack(side="left", padx=1)
+        theme.icon_button(btn_frame, "save", "保存", color="#FFFFFF", bootstyle=PRIMARY, command=self.save_provider_from_form).pack(side="left", padx=1)
+        theme.icon_button(btn_frame, "test", "测试", color="#FFFFFF", bootstyle=SECONDARY, command=self.test_selected_provider).pack(side="left", padx=1)
+        theme.icon_button(btn_frame, "refresh", "获取模型", bootstyle=(INFO, OUTLINE), command=self.fetch_provider_models).pack(side="left", padx=1)
 
-        card, inner = self._create_card(container)
-        card.pack(fill="x", pady=(0, 8))
-        section = self._create_section_title(inner, "服务商配置", "#9B59B6")
+        # ┃ 服务商配置（表单）
+        section = self._create_section_title(container, "服务商配置", "#9B59B6")
         section.pack(fill="x", pady=(theme.SPACING["md"], theme.SPACING["sm"]))
 
         self.provider_name_var = tk.StringVar()
@@ -986,16 +848,11 @@ class AIMarkerApp(tk.Window):
         self.provider_api_format_var = tk.StringVar(value=self._choice_label(self.API_FORMAT_CHOICES, ""))
         self.provider_test_prompt_var = tk.StringVar(value="请只回复：连接成功")
 
-        form = ttk.Frame(inner)
-        form.setObjectName("providerForm")
+        form = ttk.Frame(container)
         form.pack(fill="both", expand=True)
 
         row = 0
-        name_entry = ttk.Entry(form, textvariable=self.provider_name_var)
-        name_entry.setObjectName("providerNameEntry")
-        ttk.Label(form, text="名称", font=(theme.FONT_FAMILY, 9)).grid(row=row, column=0, sticky="w", pady=3)
-        name_entry.grid(row=row, column=1, sticky="ew", pady=3)
-        row += 1
+        row = self._entry(form, row, "名称", self.provider_name_var)
         ttk.Label(form, text="模型来源", font=(theme.FONT_FAMILY, 9)).grid(row=row, column=0, sticky="w", pady=2)
         ttk.Combobox(form, textvariable=self.provider_source_var, values=self._choice_labels(self.PROVIDER_SOURCE_CHOICES),
                      state="readonly", width=16).grid(row=row, column=1, sticky="w", pady=2)
@@ -1024,77 +881,40 @@ class AIMarkerApp(tk.Window):
         row += 1
         row = self._entry(form, row, "测试对话", self.provider_test_prompt_var)
 
-        for label_widget in form.findChildren(QLabel):
-            label_widget.setObjectName("providerFieldLabel")
-            label_widget.setFixedWidth(76)
-            label_widget.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-        self.provider_action_status = ttk.Label(
-            inner,
-            text="就绪",
-            name="providerActionStatus",
-        )
-        self.provider_action_status.setObjectName("providerActionStatus")
-        self.provider_action_status.setStyleSheet(f"color: {theme.COLORS['muted']};")
-        self.provider_action_status.pack(fill="x", pady=(4, 0))
         form.columnconfigure(1, weight=1)
         self.refresh_provider_selector()
         self.after(250, lambda: self.refresh_selected_ollama_models(False))
 
-    def _build_box_tab(self, parent=None) -> None:
-        tab = parent if parent is not None else ttk.Frame(self)
-        container = ttk.Frame(tab, padding=0 if parent is not None else theme.SPACING["sm"])
+    def _build_box_tab(self) -> None:
+        _, tab = self._create_scrollable_tab("操作框")
+        container = ttk.Frame(tab, padding=theme.SPACING["sm"])
         container.pack(fill="both", expand=True)
-        if parent is None:
-            section = self._create_section_title(container, "操作框管理", "#3498DB")
-            section.pack(fill="x", pady=(0, theme.SPACING["sm"]))
-        add_all = theme.icon_button(container, "add", "一键添加", color="#FFFFFF", bootstyle=PRIMARY, command=self.add_all_boxes)
-        add_all.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        add_all.pack(fill="x", pady=(0, 6))
-        rows = [
-            ("答题卡框", "recognition", DANGER, "#FFFFFF"),
-            ("分值输入框", "score", SUCCESS, "#FFFFFF"),
-            ("提交按钮框", "submit", PRIMARY, "#FFFFFF"),
-        ]
-        for label, kind, style, color in rows:
-            row = ttk.Frame(container)
-            row.pack(fill="x", pady=3)
-            name_chip = ttk.Frame(row)
-            name_chip.setObjectName("fieldChip")
-            name_chip.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-            name_chip.setMinimumHeight(30)
-            ttk.Label(name_chip, text=label).pack(side="left", padx=10, pady=6)
-            name_chip.pack(side="left", fill="x", expand=True, padx=(0, 6))
-            btn = theme.icon_button(row, "add", "添加标记", color=color, bootstyle=style, command=lambda k=kind: self.add_box(k))
-            btn.setMinimumWidth(96)
-            btn.pack(side="right")
-        tools = ttk.Frame(container)
-        tool_grid = QGridLayout(tools)
-        tools.pack(fill="x", pady=(6, 4))
-        tool_grid.setContentsMargins(0, 0, 0, 0)
-        tool_grid.setHorizontalSpacing(4)
-        show_btn = theme.icon_button(tools, "eye", "显示框", color="#FFFFFF", bootstyle=INFO, command=self.toggle_floating_boxes)
-        remove_btn = theme.icon_button(tools, "delete", "移除", color="#FFFFFF", bootstyle=DANGER, command=self.delete_selected_box)
-        for col, btn in enumerate((show_btn, remove_btn)):
-            btn.setProperty("compact", True)
-            btn.setMinimumWidth(0)
-            btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-            btn.style().unpolish(btn)
-            btn.style().polish(btn)
-            tool_grid.addWidget(btn, 0, col)
-            tool_grid.setColumnStretch(col, 1)
+
+        # ┃ 操作框管理
+        section = self._create_section_title(container, "操作框管理", "#3498DB")
+        section.pack(fill="x", pady=(0, theme.SPACING["sm"]))
+
+        toolbar = ttk.Frame(container)
+        toolbar.pack(fill="x", pady=(0, theme.SPACING["sm"]))
+        theme.icon_button(toolbar, "scan", "识别框", color="#FFFFFF", bootstyle=SUCCESS, command=lambda: self.add_box("recognition")).pack(side="left", padx=1)
+        theme.icon_button(toolbar, "chart", "打分框", color="#FFFFFF", bootstyle=PRIMARY, command=lambda: self.add_box("score")).pack(side="left", padx=1)
+        theme.icon_button(toolbar, "send", "提交框", color="#FFFFFF", bootstyle=WARNING, command=lambda: self.add_box("submit")).pack(side="left", padx=1)
+        theme.icon_button(toolbar, "delete", "删除选中框", color="#FFFFFF", bootstyle=DANGER, command=self.delete_selected_box).pack(side="left", padx=(8, 0))
         self.boxes_visible = tk.BooleanVar(value=True)
-        self.toggle_boxes_button = show_btn
+        self.toggle_boxes_button = theme.icon_button(toolbar, "eye", "显示调整框", color="#FFFFFF", bootstyle=INFO, command=self.toggle_floating_boxes)
+        self.toggle_boxes_button.pack(side="left", padx=1)
+
         columns = ("name", "kind", "x", "y", "w", "h")
-        self.box_tree = ttk.Treeview(container, columns=columns, show="headings", height=5)
+        self.box_tree = ttk.Treeview(container, columns=columns, show="headings", height=8)
         for c, title in zip(columns, ["名称", "类型", "X", "Y", "宽", "高"]):
             self.box_tree.heading(c, text=title)
             self.box_tree.column(c, width=80)
         self.box_tree.pack(fill="both", expand=True)
         self.refresh_boxes()
-    def _build_history_tab(self, parent=None) -> None:
-        if parent is None:
-            return
-        container = ttk.Frame(parent, padding=theme.SPACING["sm"])
+
+    def _build_history_tab(self) -> None:
+        _, tab = self._create_scrollable_tab("历史")
+        container = ttk.Frame(tab, padding=theme.SPACING["sm"])
         container.pack(fill="both", expand=True)
 
         # ┃ 历史记录
@@ -1121,10 +941,9 @@ class AIMarkerApp(tk.Window):
         self.history_text.pack(fill="both", expand=True)
         self.refresh_history()
 
-    def _build_preset_tab(self, parent=None) -> None:
-        if parent is None:
-            return
-        container = ttk.Frame(parent, padding=theme.SPACING["sm"])
+    def _build_preset_tab(self) -> None:
+        _, tab = self._create_scrollable_tab("方案")
+        container = ttk.Frame(tab, padding=theme.SPACING["sm"])
         container.pack(fill="both", expand=True)
 
         # ┃ 选择方案（下拉选择）
@@ -1144,7 +963,6 @@ class AIMarkerApp(tk.Window):
 
         # 操作按钮（紧凑）
         btn_frame = ttk.Frame(container)
-        btn_frame.setObjectName("providerToolbar")
         btn_frame.pack(fill="x", pady=(0, theme.SPACING["md"]))
         theme.icon_button(btn_frame, "open", "载入", color="#FFFFFF", bootstyle=PRIMARY, command=self.load_selected_preset).pack(side="left", padx=1)
         theme.icon_button(btn_frame, "save", "保存", color="#FFFFFF", bootstyle=SUCCESS, command=self.save_current_preset).pack(side="left", padx=1)
@@ -1171,13 +989,13 @@ class AIMarkerApp(tk.Window):
         self.refresh_presets()
 
     def _entry(self, parent, row: int, label: str, var: tk.Variable, show: str | None = None) -> int:
-        ttk.Label(parent, text=label, font=(theme.FONT_FAMILY, 9)).grid(row=row, column=0, sticky="w", pady=3)
-        ttk.Entry(parent, textvariable=var, show=show).grid(row=row, column=1, sticky="ew", pady=3)
+        ttk.Label(parent, text=label).grid(row=row, column=0, sticky="w", pady=6)
+        ttk.Entry(parent, textvariable=var, show=show).grid(row=row, column=1, sticky="ew", pady=6)
         return row + 1
 
     def _shared_grading_provider_row(self, parent, row: int) -> int:
         # 服务商只出现一次，主评/副评/仲裁/OCR 共用它的 Key、端点和模型。
-        ttk.Label(parent, text="当前服务商").grid(row=row, column=0, sticky="w", pady=6)
+        ttk.Label(parent, text="服务商").grid(row=row, column=0, sticky="w", pady=6)
         combo = ttk.Combobox(parent, textvariable=self.primary_provider, values=self.provider_names(), state="readonly")
         combo.grid(row=row, column=1, sticky="ew", pady=6)
         combo.bind("<<ComboboxSelected>>", lambda _e: self.on_shared_grading_provider_changed())
@@ -1196,33 +1014,23 @@ class AIMarkerApp(tk.Window):
         return row + 1
 
     def _labeled_text(self, parent, label: str, value: str, height: int) -> tk.Text:
-        if label:
-            ttk.Label(parent, text=label).pack(anchor="w")
-        text = self._register_text(tk.Text(parent, height=height, wrap="word"))
-        text.pack(fill="both", expand=True, pady=(4, 10))
+        ttk.Label(parent, text=label).pack(anchor="w")
+
+        # 创建带滚动条的容器
+        text_frame = ttk.Frame(parent)
+        text_frame.pack(fill="both", expand=True, pady=(4, 10))
+
+        # 创建滚动条
+        scrollbar = ttk.Scrollbar(text_frame)
+        scrollbar.pack(side="right", fill="y")
+
+        # 创建Text控件并连接滚动条
+        text = self._register_text(tk.Text(text_frame, height=height, wrap="word", yscrollcommand=scrollbar.set))
+        text.pack(side="left", fill="both", expand=True)
+        scrollbar.config(command=text.yview)
+
         text.insert("1.0", value)
         return text
-    def _sync_progress_bar(self, *_args) -> None:
-        text = str(self.progress_var.get() or "0/0")
-        current, _, total = text.partition("/")
-        try:
-            cur = int(str(current).strip())
-        except Exception:
-            cur = 0
-        try:
-            tot = int(str(total).strip())
-        except Exception:
-            tot = 0
-        if tot <= 0:
-            self.progress_bar.setRange(0, 0 if cur else 1)
-            self.progress_bar.setValue(0)
-            if hasattr(self, "graded_count"):
-                self.graded_count.set(str(max(0, cur)))
-            return
-        self.progress_bar.setRange(0, tot)
-        self.progress_bar.setValue(max(0, min(cur, tot)))
-        if hasattr(self, "graded_count"):
-            self.graded_count.set(str(max(0, cur)))
 
     def set_status(self, text: str) -> None:
         self.status_var.set(text)
@@ -1230,8 +1038,6 @@ class AIMarkerApp(tk.Window):
 
     def on_close(self) -> None:
         # 关窗时先停批改线程，避免窗口销毁后还在截屏或点鼠标。
-        if getattr(self, "_closed", False):
-            return
         self.running = False
         self.continuous = False
         self.paused = False
@@ -1241,18 +1047,7 @@ class AIMarkerApp(tk.Window):
         floating = getattr(self, "floating_boxes", None)
         if floating:
             floating.destroy()
-        if not getattr(self, "_closed", False):
-            self.destroy()
-
-    def _finish_provider_action(self, status: str | None = None) -> None:
-        """恢复服务商后台操作的按钮，避免请求结束后页面保持禁用。"""
-        if getattr(self, "_closed", False):
-            return
-        self._provider_action_busy = False
-        for button in self._provider_fetch_buttons + self._provider_test_buttons:
-            button.setEnabled(True)
-        if status is not None:
-            self.provider_action_status.configure(text=status)
+        self.destroy()
 
     def change_theme(self, _event=None) -> None:
         """切换主题 - 实时生效"""
@@ -1276,6 +1071,7 @@ class AIMarkerApp(tk.Window):
             self.set_status(f"主题已切换为 {selected_display_name}")
         except Exception as e:
             self.set_status(f"主题切换失败：{str(e)}")
+            from tkinter import messagebox
             messagebox.showerror("错误", f"无法切换到该主题：{str(e)}")
 
     def save_all(self) -> None:
@@ -1305,12 +1101,12 @@ class AIMarkerApp(tk.Window):
         self.config_data.workflow.secondary_provider = provider_for_role(self.config_data, "secondary")
         self.config_data.workflow.arbitration_provider = provider_for_role(self.config_data, "arbitration")
         self.config_data.workflow.mode = self._choice_value(self.GRADE_MODE_CHOICES, self.mode.get(), "normal")
-        self.config_data.workflow.recognition_mode = "direct"
+        self.config_data.workflow.recognition_mode = self._choice_value(self.RECOGNITION_MODE_CHOICES, self.recognition_mode.get(), "direct")
         self.config_data.workflow.dual_threshold = float(self.dual_threshold.get() or 2)
         self.config_data.workflow.capture_delay = float(self.capture_delay.get() or 0)
         self.config_data.workflow.scoring_delay = float(self.scoring_delay.get() or 0)
         self.config_data.workflow.next_paper_delay = float(self.next_paper_delay.get() or 0)
-        self.config_data.workflow.score_switch_mode = "single"
+        self.config_data.workflow.score_switch_mode = self._choice_value(self.SCORE_SWITCH_CHOICES, self.score_switch_mode.get(), "single")
         target_count = max(0, self._safe_int(self.target_count.get(), 0))
         self.config_data.workflow.target_count = target_count
         self.config_data.workflow.target_count_enabled = target_count > 0
@@ -1332,18 +1128,17 @@ class AIMarkerApp(tk.Window):
             self.config_data.workflow.page_refresh_wait_seconds = 5.0
         self.page_refresh_wait_seconds.set(str(self.config_data.workflow.page_refresh_wait_seconds))
         self.config_data.scoring.max_score = float(self.max_score.get() or 0)
-        self.config_data.scoring.round_step = 1.0
-        self.config_data.scoring.round_method = "round"
+        self.config_data.scoring.round_step = float(self.round_step.get() or 1)
+        self.config_data.scoring.round_method = self._choice_value(self.ROUND_METHOD_CHOICES, self.round_method.get(), "round")
         self.config_data.scoring.diligence_enabled = False
         # 删除分小题评分功能
-        self.config_data.preprocess_level = 1
-        self.preprocess.set(1)
+        self.config_data.preprocess_level = int(self.preprocess.get())
         self.config_data.recognition_margin = int(float(self.recognition_margin.get() or 0))
         self.config_data.blank_detection_enabled = self.blank_enabled.get()
         self.config_data.save_images = self.save_images.get()
-        self.config_data.grade_level = "高中"
-        self.config_data.subject = "生物"
-        self.config_data.question_type = "填空"
+        self.config_data.grade_level = self.grade_level.get().strip()
+        self.config_data.subject = self.subject.get().strip()
+        self.config_data.question_type = self.question_type.get().strip()
         # 题目内容已删除，不再保存
         self.config_data.answer = self.answer.get("1.0", "end").strip()
         self.config_data.rubric = self.rubric.get("1.0", "end").strip()
@@ -1355,24 +1150,6 @@ class AIMarkerApp(tk.Window):
     def show_about(self) -> None:
         """显示关于对话框"""
         show_about_dialog(self)
-
-    def show_history_dialog(self) -> None:
-        dialog = tk.Toplevel(self)
-        dialog.title("历史记录")
-        dialog.geometry("520x640")
-        dialog.transient(self)
-        theme.apply_window_icon(dialog)
-        self._build_history_tab(dialog)
-        dialog.wait_window()
-
-    def show_preset_dialog(self) -> None:
-        dialog = tk.Toplevel(self)
-        dialog.title("方案管理")
-        dialog.geometry("520x640")
-        dialog.transient(self)
-        theme.apply_window_icon(dialog)
-        self._build_preset_tab(dialog)
-        dialog.wait_window()
 
     def _safe_int(self, value: str, default: int = 0) -> int:
         try:
@@ -1396,23 +1173,16 @@ class AIMarkerApp(tk.Window):
         self.arbitration_model.set(shared_model)
         self.ocr_model.set(shared_model)
         self.mode.set(self._choice_label(self.GRADE_MODE_CHOICES, self.config_data.workflow.mode))
-        self.config_data.workflow.recognition_mode = "direct"
-        self.recognition_mode.set(self._choice_label(self.RECOGNITION_MODE_CHOICES, "direct"))
-        self.config_data.grade_level = "高中"
-        self.config_data.subject = "生物"
-        self.grade_level.set("高中")
-        self.subject.set("生物")
-        self.config_data.question_type = "填空"
-        self.question_type.set("填空")
+        self.recognition_mode.set(self._choice_label(self.RECOGNITION_MODE_CHOICES, self.config_data.workflow.recognition_mode))
+        self.grade_level.set(self.config_data.grade_level)
+        self.subject.set(self.config_data.subject)
+        self.question_type.set(self.config_data.question_type)
         self.max_score.set(str(self.config_data.scoring.max_score))
-        self.config_data.scoring.round_step = 1.0
-        self.config_data.scoring.round_method = "round"
-        self.round_step.set("1")
-        self.round_method.set(self._choice_label(self.ROUND_METHOD_CHOICES, "round"))
+        self.round_step.set(str(self.config_data.scoring.round_step))
+        self.round_method.set(self._choice_label(self.ROUND_METHOD_CHOICES, self.config_data.scoring.round_method))
         self.refresh_shared_model_combos()
         self.save_images.set(self.config_data.save_images)
-        self.config_data.preprocess_level = 1
-        self.preprocess.set(1)
+        self.preprocess.set(self.config_data.preprocess_level)
         self._refresh_preprocess_label()
         self.recognition_margin.set(str(self.config_data.recognition_margin))
         self.blank_enabled.set(self.config_data.blank_detection_enabled)
@@ -1420,8 +1190,7 @@ class AIMarkerApp(tk.Window):
         self.capture_delay.set(str(self.config_data.workflow.capture_delay))
         self.scoring_delay.set(str(self.config_data.workflow.scoring_delay))
         self.next_paper_delay.set(str(self.config_data.workflow.next_paper_delay))
-        self.config_data.workflow.score_switch_mode = "single"
-        self.score_switch_mode.set(self._choice_label(self.SCORE_SWITCH_CHOICES, "single"))
+        self.score_switch_mode.set(self._choice_label(self.SCORE_SWITCH_CHOICES, self.config_data.workflow.score_switch_mode))
         self.target_count.set(str(self.config_data.workflow.target_count))
         self.pause_hotkey.set(self.config_data.workflow.pause_hotkey)
         self.retry_limit.set(str(self.config_data.workflow.retry_limit))
@@ -1514,14 +1283,8 @@ class AIMarkerApp(tk.Window):
             floating.raise_kind(kind)
         self.set_status("操作框已添加，可直接在桌面拖拽调整")
 
-    def add_all_boxes(self) -> None:
-        for kind in ("recognition", "score", "submit"):
-            self.add_box(kind)
-
     def refresh_boxes(self) -> None:
         self.config_data.boxes = normalize_operation_boxes(self.config_data.boxes)
-        if hasattr(self, "score_box_count"):
-            self.score_box_count.set(str(sum(1 for box in self.config_data.boxes if box.kind == "score")))
         if not hasattr(self, "box_tree"):
             return
         self.box_tree.delete(*self.box_tree.get_children())
@@ -1943,14 +1706,10 @@ class AIMarkerApp(tk.Window):
             self.paused = False
 
     def _poll_queue(self) -> None:
-        if getattr(self, "_closed", False):
-            return
         try:
             while True:
                 kind, payload = self.work_queue.get_nowait()
                 if kind == "status":
-                    if self._provider_action_busy and "连接成功" in str(payload):
-                        self._finish_provider_action("服务商测试完成")
                     self.set_status(payload)
                     self._refresh_pause_button()
                 elif kind == "pause_toggle":
@@ -1974,14 +1733,12 @@ class AIMarkerApp(tk.Window):
                         self._restore_floating_boxes(True)
                         self._restore_boxes_after_worker = False
                 elif kind == "models":
-                    self._finish_provider_action("模型获取完成")
                     models = list(payload.get("models") or [])
                     self._apply_fetched_models(models, index=payload.get("index"))
-                    name = payload.get("name") or "当前服务商"
+                    name = payload.get("name") or "服务商"
                     current = self.provider_model_var.get() or (models[0] if models else "")
                     self.set_status(f"{name} 已获取 {len(models)} 个模型，当前可选：{current}")
                 elif kind == "error":
-                    self._finish_provider_action("操作失败")
                     if self._restore_boxes_after_worker:
                         self._restore_floating_boxes(True)
                         self._restore_boxes_after_worker = False
@@ -1991,12 +1748,36 @@ class AIMarkerApp(tk.Window):
                     messagebox.showerror(title, payload)
         except queue.Empty:
             pass
-        if not getattr(self, "_closed", False):
-            self.after(150, self._poll_queue)
+        self.after(150, self._poll_queue)
 
-    def _update_process_views(self, result: dict[str, Any]) -> None:
-        """把最新批改结果同步到评分过程页的所有结果控件。"""
+    def _show_result(self, result: dict[str, Any], image=None, auto_submit: bool = False) -> None:
+        """展示批改结果，连续批改时最小化UI更新。"""
         self.current_result = result
+        self.current_image = image
+
+        # 连续批改时只更新关键信息，减少UI刷新
+        if self.continuous:
+            # 只更新分数显示
+            final_score = result.get("final_score")
+            if final_score is not None:
+                score_text = f"{final_score:.1f}" if isinstance(final_score, (int, float)) else str(final_score)
+                self.final_score_label.configure(text=score_text)
+
+                max_score = result.get("max_score", self._max_score())
+                if max_score > 0:
+                    score_rate = final_score / max_score
+                    if score_rate >= 0.9:
+                        self.final_score_label.configure(bootstyle=SUCCESS, foreground=theme.COLORS["success"])
+                    elif score_rate >= 0.6:
+                        self.final_score_label.configure(bootstyle=WARNING, foreground=theme.COLORS["warning"])
+                    else:
+                        self.final_score_label.configure(bootstyle=DANGER, foreground=theme.COLORS["danger"])
+
+            # 保存历史记录
+            self._save_history_record(result)
+            return
+
+        # 单次调试批改时才完整更新UI
         # 1. 更新识别答案区域（最重要）
         self.answer_view.delete("1.0", "end")
         student_answer = result.get("student_answer", "")
@@ -2068,21 +1849,14 @@ class AIMarkerApp(tk.Window):
             quality = result.get("quality")
             self.output.insert("end", f"✓ 图像质量: {quality.get('level')} ({quality.get('width')}×{quality.get('height')})\n")
 
-    def _show_result(self, result: dict[str, Any], image=None, auto_submit: bool = False) -> None:
-        """展示最新批改结果，单次和连续批改共用同一套结果视图。"""
-        self.current_image = image
-        self._update_process_views(result)
         self._save_history_record(result)
 
-        # 连续批改不频繁重绘历史列表，但评分过程页始终显示最新结果。
-        if self.continuous:
-            status = "✓ 批改完成，已自动提交"
-        else:
-            self.refresh_history()
-            self.work_canvas.yview_moveto(0)
-            status = "✓ 批改完成"
+        # 只在单次调试时刷新历史和滚动
+        self.refresh_history()
+        self.work_canvas.yview_moveto(0)
 
-        self.set_status(status)
+        # 连续批改时自动填分提交后即返回，无需弹窗确认
+        self.set_status("✓ 批改完成，已自动提交" if self.continuous else "✓ 批改完成")
 
     def _score_values_for_fill(self, result: dict[str, Any]) -> list[float | int | str]:
         if self.config_data.workflow.score_switch_mode == "single":
@@ -2183,10 +1957,6 @@ class AIMarkerApp(tk.Window):
             messagebox.showinfo("未选择服务商", "请先选择一个服务商")
             return
         snapshot = self._provider_from_form(self.config_data.providers[index])
-        self._provider_action_busy = True
-        for button in self._provider_fetch_buttons + self._provider_test_buttons:
-            button.setEnabled(False)
-        self.provider_action_status.configure(text=f"正在获取模型：{snapshot.name}")
         self.set_status(f"正在获取模型：{snapshot.name}")
 
         def worker() -> None:
@@ -2520,10 +2290,6 @@ class AIMarkerApp(tk.Window):
             return
         self.save_provider_from_form()
         provider = self.config_data.providers[index]
-        self._provider_action_busy = True
-        for button in self._provider_fetch_buttons + self._provider_test_buttons:
-            button.setEnabled(False)
-        self.provider_action_status.configure(text=f"正在测试服务商：{provider.name}")
         self.set_status(f"正在测试服务商：{provider.name}")
 
         def worker() -> None:
@@ -2772,9 +2538,5 @@ class AIMarkerApp(tk.Window):
 
 
 def run_app() -> None:
-    tk.ensure_app()
     app = AIMarkerApp()
     app.mainloop()
-
-
-

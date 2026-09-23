@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <defs>
+    <linearGradient id="gemTop" x1="12" y1="2" x2="12" y2="12" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#F06292"/>
+      <stop offset="100%" stop-color="#4285F4"/>
+    </linearGradient>
+    <linearGradient id="gemRight" x1="12" y1="12" x2="22" y2="12" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#4285F4"/>
+      <stop offset="100%" stop-color="#34A853"/>
+    </linearGradient>
+    <linearGradient id="gemBottom" x1="12" y1="12" x2="12" y2="22" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#34A853"/>
+      <stop offset="100%" stop-color="#FBBC04"/>
+    </linearGradient>
+    <linearGradient id="gemLeft" x1="2" y1="12" x2="12" y2="12" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FBBC04"/>
+      <stop offset="100%" stop-color="#F06292"/>
+    </linearGradient>
+  </defs>
+  <rect width="24" height="24" rx="5.5" fill="#FFFFFF"/>
+  <path d="M12 2.6
+    C13.6 8.4 15.1 10.2 21.4 12
+    C15.1 13.8 13.6 15.6 12 21.4
+    C10.4 15.6 8.9 13.8 2.6 12
+    C8.9 10.2 10.4 8.4 12 2.6Z" fill="url(#gemTop)"/>
+  <path d="M12 2.6
+    C13.6 8.4 15.1 10.2 21.4 12
+    L12 12Z" fill="url(#gemRight)" opacity=".92"/>
+  <path d="M12 12
+    C13.6 15.6 12 21.4 12 21.4
+    C10.4 15.6 8.9 13.8 2.6 12
+    L12 12Z" fill="url(#gemBottom)" opacity=".92"/>
+  <path d="M12 2.6
+    C8.9 10.2 2.6 12 2.6 12
+    C8.9 13.8 10.4 15.6 12 12
+    L12 2.6Z" fill="url(#gemLeft)" opacity=".92"/>
+</svg>

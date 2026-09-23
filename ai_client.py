@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import base64
 import json
@@ -81,9 +81,16 @@ def build_prompt(config: AppConfig, student_text: str | None = None) -> str:
         max_score = sum(u.max_score for u in config.scoring.units)
     compact = use_compact_scoring(config)
     if student_text is None:
-        prompt = "你是一位严格的阅卷老师。请只根据截图中识别框内的学生答案进行 OCR 和评分。\n\n===== 输入信息 ====="
+        prompt = (
+            "你是阅卷老师。请根据题目、标准答案和评分标准，评判图片中学生最终保留的作答。"
+            "只把学生作答笔迹视为答案；印刷题目、选项、标题及教师批改痕迹不是学生答案。"
+            "划掉、涂抹覆盖的内容作废，只看最终保留内容；无法确认的内容不得推测或补全。"
+        )
     else:
-        prompt = "你是一位严格的阅卷老师。学生答案已经由 OCR 模型识别，请根据识别文本评分；无法确认的文字按不确定处理，不要擅自补全。\n\n===== 输入信息 ====="
+        prompt = (
+            "你是阅卷老师。请仅依据给出的学生答案 OCR 文本、题目、标准答案和评分标准评分；"
+            "OCR 不确定或无法辨认处不得推测或补全，也不要纠错。"
+        )
         prompt += f"\n【学生答案OCR文本】\n{student_text.strip() or '未能识别'}"
     context = _context_text(config)
     if context:
@@ -99,30 +106,47 @@ def build_prompt(config: AppConfig, student_text: str | None = None) -> str:
         prompt += "\n【分小题】"
         for unit in config.scoring.units:
             prompt += f"\n{unit.label}: 满分{unit.max_score:g}分"
+
+    prompt += (
+        "\n\n【判分规则】以评分标准为准，标准答案仅作参考；认可同义或等价表述/解法，"
+        "只给有答案依据的分，按标准给部分分，不自创扣分项。空白、未识别或答非所问给0分；"
+        "部分可辨时仅按可辨内容评分，不猜测补全，也不因识别标记本身扣分；总分不得超过满分。"
+    )
     if compact:
-        prompt += "\n\n===== 输出要求 =====\n严格按以下格式输出，内容尽量短：\n\n【答案复述】\n一句话概括学生答案。\n\n【评分依据】\n一两句说明对错。\n\n【得分】\n一个数字。"
+        prompt += (
+            "\n\n【输出要求】只按以下字段输出，不加其他段落：\n"
+            "【答案复述】忠实简述学生实际作答；无法识别写“未能识别”。\n"
+            "【评分依据】简述得分理由。\n【得分】只写数字。"
+        )
         if config.scoring.units:
             for unit in config.scoring.units:
-                prompt += f"\n\n{unit.label}分数：一个数字"
-        prompt += "\n\n===== 重要约束 =====\n1. 被划掉、涂改、涂抹覆盖的内容视为无效，只评判最终保留的答案。\n2. 无法识别时【答案复述】写“未能识别”，【得分】写 0。\n3. 【得分】必须只包含数字。"
+                prompt += f"\n{unit.label}分数：只写数字"
         return prompt
-    prompt += "\n\n===== 输出要求 =====\n你必须严格按照以下格式输出，不得添加其他段落：\n\n【答案复述】\n逐条列出学生答案要点。\n\n【评分依据】\n逐项说明得分和扣分点。\n\n【分数计算】\n写出计算公式。"
+
+    prompt += (
+        "\n\n【输出要求】严格按字段输出，不加其他段落：\n"
+        "【答案复述】忠实列出学生实际作答要点；无法识别写“未能识别”。\n"
+        "【评分依据】逐项说明得分、扣分及部分分依据。\n【分数计算】写出简式。"
+    )
     if config.scoring.units:
         for unit in config.scoring.units:
-            prompt += f"\n\n{unit.label}分数：一个数字\n{unit.label}评语：简短说明"
-    prompt += "\n\n【得分】\n一个数字，可以是小数。"
-    prompt += "\n\n===== 重要约束 =====\n1. 被划掉、涂改、涂抹覆盖的内容视为无效，只评判最终保留的答案。\n2. 如果无法识别学生答案，在【答案复述】写“未能识别”。\n3. 【得分】必须只包含数字。"
+            prompt += f"\n{unit.label}分数：只写数字\n{unit.label}评语：简述依据"
+    prompt += "\n【得分】只写数字，可为小数，不超过满分。"
     return prompt
 
 
 def build_ocr_prompt(config: AppConfig) -> str:
     context = _context_text(config)
-    prompt = "请只识别截图中答题卡识别框内的学生手写或打印答案，忽略打分框、提交按钮、网页导航和无关内容。"
+    prompt = (
+        "你是答题卡OCR。只转写本图学生作答区域的有效内容；忽略印刷题目/选项、标题、姓名考号、"
+        "网格/水印及教师批改/得分。按从上到下、从左到右完整转写题号、小题号和答案，保留换行、"
+        "公式（用LaTeX）、数字、单位；多栏/长答案不省略、不概括。划掉、涂抹、打叉内容作废，只录最终笔迹。"
+        "可辨内容照录，不纠错、不补全；局部无法辨认标“【无法辨认】”，不得推测；"
+        "无有效作答写“未能识别”。只输出答案，不分析、评分或解释。"
+    )
     if context:
-        prompt += f"\n题目背景：\n{context}"
-    prompt += "\n输出要求：只输出识别到的学生答案文本；如果完全无法识别，输出“未能识别”。"
+        prompt += f"\n识别辅助（仅用于定位题目，不是答案，禁止照抄）：\n{context}"
     return prompt
-
 
 def _image_content_from_b64(image_b64: str) -> dict[str, Any]:
     mime = _image_mime_from_b64(image_b64)

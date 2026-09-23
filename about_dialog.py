@@ -4,8 +4,8 @@
 显示软件信息、版本号和风险提示
 """
 
-import qtcompat as tk
-from qtcompat import ttk
+import tkinter as tk
+from tkinter import ttk
 
 import theme
 
@@ -20,11 +20,13 @@ def show_about_dialog(parent):
     dialog.grab_set()
     theme.apply_window_icon(dialog)
 
+    # 居中显示
     dialog.update_idletasks()
     x = (dialog.winfo_screenwidth() // 2) - (500 // 2)
     y = (dialog.winfo_screenheight() // 2) - (450 // 2)
-    dialog.geometry("+%s+%s" % (x, y))
+    dialog.geometry(f"+{x}+{y}")
 
+    # 主容器
     container = ttk.Frame(dialog, padding=20)
     container.pack(fill="both", expand=True)
 
@@ -38,6 +40,7 @@ def show_about_dialog(parent):
     )
     name_label.pack(pady=(0, 5))
 
+    # 版本号
     version_label = ttk.Label(
         container,
         text="版本 v2.1",
@@ -45,6 +48,7 @@ def show_about_dialog(parent):
     )
     version_label.pack(pady=(0, 15))
 
+    # 简介
     intro_label = ttk.Label(
         container,
         text="AI辅助阅卷工具，适合教师进行批量初评、自动填分和阅卷流程提效。购买后即可使用完整功能，无需激活码。",
@@ -54,9 +58,11 @@ def show_about_dialog(parent):
     )
     intro_label.pack(pady=(0, 20))
 
+    # 分隔线
     separator = ttk.Separator(container, orient="horizontal")
     separator.pack(fill="x", pady=10)
 
+    # 风险提示标题
     warning_title = ttk.Label(
         container,
         text="重要提示",
@@ -65,6 +71,7 @@ def show_about_dialog(parent):
     )
     warning_title.pack(pady=(5, 10))
 
+    # 风险提示内容
     warning_text = """当前版本仍处于早期优化阶段。
 
 • 对学生手写答案的 OCR 识别仍不精准
@@ -85,9 +92,11 @@ def show_about_dialog(parent):
     )
     warning_label.pack(pady=(0, 15))
 
+    # 分隔线
     separator2 = ttk.Separator(container, orient="horizontal")
     separator2.pack(fill="x", pady=10)
 
+    # 联系信息
     contact_label = ttk.Label(
         container,
         text="如有问题或建议，请联系管理员",
@@ -95,13 +104,17 @@ def show_about_dialog(parent):
     )
     contact_label.pack(pady=(5, 15))
 
-    close_btn = theme.icon_button(
+    # 关闭按钮
+    close_btn = ttk.Button(
         container,
-        "check",
-        "我知道了",
+        text="我知道了",
         command=dialog.destroy,
+        width=15
     )
     close_btn.pack()
 
+    # 绑定ESC键关闭
     dialog.bind("<Escape>", lambda e: dialog.destroy())
+
+    # 等待窗口关闭
     dialog.wait_window()

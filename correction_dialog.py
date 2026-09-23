@@ -1,18 +1,20 @@
 from __future__ import annotations
 
+import tkinter as tk
+from tkinter import messagebox, ttk
 from typing import Any, Callable
-
-import qtcompat as tk
-from qtcompat import messagebox, ttk
 
 import theme
 from models import AppConfig
 
 
+# 校正对话框用于帮助老师复核 AI 打分，并可同步刷新参考答案和评分标准。
+
+
 class CorrectionDialog(tk.Toplevel):
     def __init__(
         self,
-        master,
+        master: tk.Misc,
         config: AppConfig,
         result: dict[str, Any],
         on_accept: Callable[[float, dict[str, Any]], None],
@@ -32,6 +34,7 @@ class CorrectionDialog(tk.Toplevel):
         root = ttk.Frame(self, padding=14)
         root.pack(fill="both", expand=True)
 
+        # 顶部展示 AI 的当前得分，方便与人工判断对照。
         ttk.Label(root, text="AI 打分", font=(theme.FONT_FAMILY, 12, "bold")).grid(row=0, column=0, sticky="w")
         ttk.Label(root, text=str(self.result.get("final_score", "")), font=(theme.FONT_FAMILY, 24, "bold")).grid(
             row=1,
