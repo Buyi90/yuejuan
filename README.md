@@ -12,43 +12,61 @@
 
 ## 环境要求
 
-- Windows 10 或更新版本
-- Python 3.10+
-- 可用的 AI 服务 API Key；使用 Ollama 时需安装并启动 Ollama
+- 源码运行和构建：Windows 10 或更新版本、64 位 Python 3.10+、Git，以及可联网安装依赖的网络环境。
+- AI 在线评分：用户自己的有效 API Key、对应服务商可用的模型和网络连接；API 使用费用由用户承担。
+- 使用 Ollama：还需在本机另行安装并启动 Ollama，并准备好本地模型。
+- 仅运行已构建的独立 exe：目标电脑为 Windows 10/11 x64 即可，不需要安装 Python；在线 AI 功能仍需要 API Key 和网络。
 
 ## 安装与启动
 
-### 构建可分发版本
+### 方式一：从源码运行
 
-首次构建时安装打包依赖：python -m pip install -r requirements-build.txt，然后双击“构建软件.bat”。构建完成后，将 dist/AI智阅小助手.exe 复制到目标 Windows 10/11 x64 电脑并双击运行；目标电脑不需要安装 Python。程序首次运行会在用户的 Roaming 应用数据目录创建配置和历史文件。AI 在线评分仍需使用者配置自己的 API Key；使用 Ollama 时目标电脑需单独安装并启动 Ollama。Windows 可能对未签名的自制程序显示安全提示。
-
-在项目目录打开 PowerShell：
+先安装 64 位 Python 3.10 或更高版本，并确保 `py` 命令可用。克隆仓库后，在项目目录打开 PowerShell，首次运行执行：
 
 ```powershell
+git clone https://github.com/Buyi90/yuejuan.git
+cd yuejuan
 py -m venv .venv
-.\.venv\Scripts\Activate.ps1
-python -m pip install --upgrade pip
-pip install -r requirements.txt
-python main.py
+.\.venv\Scripts\python.exe -m pip install --upgrade pip
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
 ```
 
-也可以在已配置好 Python 环境的 Windows 电脑上双击 `启动软件.bat`。
+依赖安装完成后，双击项目根目录中的 `启动软件.bat` 即可运行源码；也可以用下面命令直接启动：
+
+```powershell
+.\.venv\Scripts\python.exe main.py
+```
+
+首次运行会自动创建本机配置目录和默认配置文件。API Key 需要在应用内自行填写。`.venv` 是本机生成的 Python 环境，不包含在 Git 仓库中；新电脑克隆源码后必须先按以上步骤安装 Python 依赖，不能跳过初始化直接双击启动。
+
+### 方式二：构建后分发独立 exe
+
+先按“从源码运行”一节创建 `.venv` 并安装运行依赖，再安装打包依赖：
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install -r requirements-build.txt
+```
+
+然后双击 `构建软件.bat`。构建成功后，将 `dist\AI智阅小助手.exe` 单独发给对方；目标电脑无需安装 Python，也无需安装项目依赖，双击 exe 即可启动。exe 不提交到源码仓库，需通过其他方式发送（例如 GitHub Releases 或网盘）。
+
+在线评分仍要求使用者填入自己的有效 API Key 并保持网络可用；使用 Ollama 的用户需要在目标电脑单独安装并启动 Ollama。Windows 可能会对未签名的程序显示安全提示。
 
 ## 开发与测试
 
-运行测试：
+运行测试前，在已创建的 `.venv` 中安装测试工具：
 
 ```powershell
-python -m pytest
+.\.venv\Scripts\python.exe -m pip install pytest
+.\.venv\Scripts\python.exe -m pytest
 ```
 
 运行代码检查测试：
 
 ```powershell
-python test_code_health.py
+.\.venv\Scripts\python.exe test_code_health.py
 ```
 
-打包配置保存在 AI智阅小助手.spec，路径会根据项目目录及当前 Python 环境自动解析，不绑定某台电脑的用户名或 Python 安装位置。requirements-build.txt 单独列出打包依赖。build/ 和 dist/ 是本地生成目录，不需要提交到源码仓库。
+打包配置保存在 `AI智阅小助手.spec`，路径会根据项目目录及当前 Python 环境自动解析，不绑定某台电脑的用户名或 Python 安装位置。`requirements-build.txt` 单独列出打包依赖。`build/` 和 `dist/` 是本地生成目录，不需要提交到源码仓库。
 
 ## 项目结构
 
@@ -58,7 +76,8 @@ python test_code_health.py
 ├── data/                   # 本地运行数据，不提交到 Git
 ├── main.py                 # 应用入口
 ├── app.py                  # 桌面主窗口与工作流
-├── requirements.txt        # Python 依赖
+├── requirements.txt        # Python 运行依赖
+├── requirements-build.txt  # PyInstaller 构建依赖
 └── AI智阅小助手.spec       # PyInstaller 打包配置
 ```
 
