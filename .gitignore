@@ -1,0 +1,55 @@
+# Local user data and secrets
+/data/*
+!/data/.gitkeep
+*.env
+.env
+.env.*
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+venv/
+.venv/
+env/
+
+# Test and tooling caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Build artifacts
+/build/
+/dist/
+*.spec.bak
+
+# Runtime logs and local captures
+*.log
+*.png
+*.jpg
+*.jpeg
+*.webp
+
+# IDE and OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Local notes and archived development artifacts
+/.agents/
+/archive/
+/Code_Review_修复报告.md
+/快速检查清单.txt
+/新产品计划书.md
+/第二版计划书.md
+/请先阅读我.txt
+/_*/
+/_*.py
+/_*.txt
+/dump_*.py
+/dump_*.txt
+/tmp_*.txt
