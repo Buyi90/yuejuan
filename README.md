@@ -37,7 +37,10 @@ py -m venv .venv
 .\.venv\Scripts\python.exe main.py
 ```
 
-首次运行会自动创建本机配置目录和默认配置文件。API Key 需要在应用内自行填写。`.venv` 是本机生成的 Python 环境，不包含在 Git 仓库中；新电脑克隆源码后必须先按以上步骤安装 Python 依赖，不能跳过初始化直接双击启动。
+首次运行会自动创建本机配置目录和默认配置文件。
+API Key 需要在应用内自行填写。
+ `.venv` 是本机生成的 Python 环境，不包含在 Git 仓库中；
+新电脑克隆源码后必须先按以上步骤安装 Python 依赖，不能跳过初始化直接双击启动。
 
 ### 方式二：构建后分发独立 exe
 
@@ -45,28 +48,6 @@ py -m venv .venv
 
 ```powershell
 .\.venv\Scripts\python.exe -m pip install -r requirements-build.txt
-```
-
-然后双击 `构建软件.bat`。构建成功后，将 `dist\AI智阅小助手.exe` 单独发给对方；目标电脑无需安装 Python，也无需安装项目依赖，双击 exe 即可启动。exe 不提交到源码仓库，需通过其他方式发送（例如 GitHub Releases 或网盘）。
-
-在线评分仍要求使用者填入自己的有效 API Key 并保持网络可用；使用 Ollama 的用户需要在目标电脑单独安装并启动 Ollama。Windows 可能会对未签名的程序显示安全提示。
-
-## 开发与测试
-
-运行测试前，在已创建的 `.venv` 中安装测试工具：
-
-```powershell
-.\.venv\Scripts\python.exe -m pip install pytest
-.\.venv\Scripts\python.exe -m pytest
-```
-
-运行代码检查测试：
-
-```powershell
-.\.venv\Scripts\python.exe test_code_health.py
-```
-
-打包配置保存在 `AI智阅小助手.spec`，路径会根据项目目录及当前 Python 环境自动解析，不绑定某台电脑的用户名或 Python 安装位置。`requirements-build.txt` 单独列出打包依赖。`build/` 和 `dist/` 是本地生成目录，不需要提交到源码仓库。
 
 ## 项目结构
 
@@ -83,14 +64,9 @@ py -m venv .venv
 
 测试文件以 `test_*.py` 命名，位于项目根目录。
 
-## 本地数据与隐私
-
-`data/` 中的配置可能含有 API Key，历史记录可能包含学生答案、评分和截图。该目录已加入 `.gitignore`，请勿将其中的内容公开上传。首次运行时应用会按需创建缺失的数据文件。
-
-运行日志、截图、Python 缓存、测试缓存和打包产物也会被 Git 忽略。
-
 ## 购买与交付
 
-本软件无需激活码。AI 服务商的 API Key 和调用费用由使用者自行承担。
+本软件无需激活码。
+AI 服务商的 API Key 和调用费用由使用者自行承担。
 
 ## 许可证
